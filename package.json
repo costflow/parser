@@ -1,0 +1,30 @@
+{
+  "name": "parser",
+  "version": "0.1.0",
+  "description": "Costflow Parser",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/costflow/parser.git"
+  },
+  "keywords": [],
+  "author": "leplay",
+  "bugs": {
+    "url": "https://github.com/costflow/parser/issues"
+  },
+  "homepage": "https://github.com/costflow/parser#readme",
+  "engines": {
+    "node": ">=8.0.0",
+    "npm": ">=5.0.0"
+  },
+  "dependencies": {
+    "axios": "^0.19.0",
+    "luxon": "^1.16.0"
+  },
+  "devDependencies": {
+    "jest": "^24.8.0"
+  }
+}
