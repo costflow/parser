@@ -52,25 +52,32 @@ async function test() {
 {
   // 'mode' is the format that parser will output. Only 'beancount' is available in Costflow Syntax V0.1.
   mode: 'beancount',
+
   // 'currency' will be applied when currency/commodity not found.
   currency: 'USD',
+
   // 'timezone' should be one of IANA-specified zones.
   // You can get your timezone by running
   // Intl.DateTimeFormat().resolvedOptions().timeZone
   // in your browser console.
   timezone: 'America/Whitehorse',
+
   // 'tag' will be inserted to every transaction.
   tag: '#costflow',
+
   // The keys in 'replacement' will be replaced with values in transactions.
   replacement: {
     'aapl': 'Assets:ETrade:AAPL',
     'bofa': 'Assets:US:BofA:Checking',
     'phone': 'Expenses:Home:Phone',
   },
+
   // 'alphavantage' is for getting the exchange rates or stock price. Get your key here https://www.alphavantage.co/support/
   alphavantage: 'YOUR_KEY_HERE',
+
   // 'indent' is the length before account name in transactions.
   indent: 2,
+
   // 'lineLength' is the length before the commodity (include) in transactions.
   lineLength: 60
 }
@@ -78,3 +85,4 @@ async function test() {
 
 
 Check out [Costflow Syntax](https://github.com/costflow/syntax) for more information.
+
