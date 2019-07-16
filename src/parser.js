@@ -206,16 +206,16 @@ const parser = async function (input, config) {
       break
     default:
       // Transactions
-
       // Save as comment if message has no command and no amount
       if (!amounts) {
         command = '//'
         output = backup
         break
       }
+      command = command || '*'
 
       // Parse the first line of a transaction: flag/payee/narration/tag/link
-      let transactionFlag = command === '!' ? '!' : '*'
+      let transactionFlag = command
       // tags
       let tagReg = /#[A-Za-z0-9\-_]+(?:\w|$)/g
       let tags = input.match(tagReg) || []
@@ -312,9 +312,9 @@ const parser = async function (input, config) {
 
       break
   }
-
   let result = {
     date,
+    command,
     sync: command && command !== '//' && command !== '$',
     tags,
     links,
