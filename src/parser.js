@@ -99,7 +99,7 @@ const parser = async function (input, config) {
   let amounts = input.match(amountReg)
   amounts = amounts ? amounts.map(n => Number(n)) : amounts
 
-  let doubleQuotesReg = /((?<![\\])['"])((?:.(?!(?<![\\])\1))*.?)\1/g
+  let doubleQuotesReg = /".*?"/g
   let doubleQuotes = input.match(doubleQuotesReg)
 
   // beancount
