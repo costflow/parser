@@ -35,7 +35,7 @@ const parseTransaction = function (transaction, config, defaultSign, calculatedA
     amount = calculatedAmount.toString()
   } else {
     amount = transaction.match(/[+-]?(\d*\.)?\d+/g)
-    amount = amount[0]
+    amount = amount ? amount[0] : null
   }
 
   let account = transaction.replace(commodity, '').replace(amount, '').trim()
@@ -57,7 +57,7 @@ const parseTransaction = function (transaction, config, defaultSign, calculatedA
   return {
     line,
     account,
-    amount,
+    amount: Number(amount),
     commodity
   }
 }
@@ -70,6 +70,10 @@ const parser = async function (input, config) {
     indent: 2,
     lineLength: 80
   }, config)
+
+  let tags = []
+  let links = []
+  let amount = null
 
   let allCurrencyReg = new RegExp(`\\b(${currencyList.concat(cryptoList).join('|')})\\b`, 'g')
   let accountReg = new RegExp('(Assets|Liabilities|Equity|Income|Expenses)(?::[a-zA-Z0-9]+)*', 'g')
@@ -85,15 +89,6 @@ const parser = async function (input, config) {
   let commandReg = /^(\*|!|;|\/\/|open|close|pad|\$|balance|price|commodity|note|event|option)/g
   let command = input.match(commandReg) && input.match(commandReg).length ? input.match(commandReg)[0] : null
   input = command ? input.slice(command.length).trim() : input.trim()
-
-  // tags
-  let tagReg = /#[A-Za-z0-9\-_]+(?:\w|$)/g
-  let tags = input.match(tagReg) || []
-  tags.push(config.tag)
-
-  // links
-  let linkReg = /\^[A-Za-z0-9\-_]+(?:\w|$)/g
-  let links = input.match(linkReg)
 
   let amountReg = /\b[+-]?(\d*\.)?\d+\b/g
   let amounts = input.match(amountReg)
@@ -216,18 +211,27 @@ const parser = async function (input, config) {
 
       // Parse the first line of a transaction: flag/payee/narration/tag/link
       let transactionFlag = command
-      // tags
-      let tagReg = /#[A-Za-z0-9\-_]+(?:\w|$)/g
-      let tags = input.match(tagReg) || []
-      tags.push(config.tag)
+      let payee
 
-      // links
-      let linkReg = /\^[A-Za-z0-9\-_]+(?:\w|$)/g
-      let links = input.match(linkReg) || []
+      let tmpTransactionArr = input.split(' ')
+      tmpTransactionArr.forEach(function (word) {
+        if (word[0] === '#') {
+          tags.push(word.replace('#', ''))
+          input = input.replace(word, '')
+        } else if (word[0] === '^') {
+          links.push(word.replace('^', ''))
+          input = input.replace(word, '')
+        }
+      })
+      if (config.tag) {
+        let configTags = config.tag.split(' ').map(tag => tag.replace('#', ''))
+        tags = tags.concat(configTags)
+      }
 
-      // payee
-      let payeeReg = /@[A-Za-z0-9\-_]+(?:\w|$)/
-      let payee = input.match(payeeReg) ? input.match(payeeReg)[0] : null
+      if (config.link) {
+        let configLinks = config.link.map(tag => tag.replace('^', ''))
+        links = links.concat(configLinks)
+      }
 
       output = `${date} ${transactionFlag}`
       if (doubleQuotes) {
@@ -243,25 +247,22 @@ const parser = async function (input, config) {
         let position = Math.min(amoutExec ? amoutExec.index : input.length, pipeExec ? pipeExec.index : input.length)
         let firstLine = input.slice(0, position)
         input = input.slice(position).trim()
+        let tmpFirstLineArr = firstLine.split(' ')
+        tmpFirstLineArr.forEach(function (word) {
+          if (word[0] === '@') {
+            payee = word.replace('@', '')
+            firstLine = firstLine.replace(word, '')
+          }
+        })
 
-        // remove payee, tags and links from firstLine
-        if (payee) {
-          firstLine = firstLine.replace(payee, '')
-        }
-        tags.forEach(function (tag) {
-          firstLine = firstLine.replace(tag, '')
-        })
-        links.forEach(function (link) {
-          firstLine = firstLine.replace(link, '')
-        })
-        output += ` ${payee ? payee.replace('@', '"') + '" ' : ''}"${firstLine.trim()}"`
+        output += ` ${payee ? '"' + payee + '" ' : ''}"${firstLine.trim()}"`
       }
 
       if (tags.length) {
-        output += ` ${tags.join(' ')}`
+        output += ` #${tags.join(' #')}`
       }
       if (links.length) {
-        output += ` ${links.join(' ')}`
+        output += ` ^${links.join(' ^')}`
       }
 
       // Parse accounts and amounts
@@ -280,6 +281,9 @@ const parser = async function (input, config) {
           leftAmount -= result.amount
           leftCommodity = result.commodity
           output += result.line
+          if (typeof result.amount === 'number') {
+            amount = Math.abs(result.amount) > amount ? Math.abs(result.amount) : amount
+          }
         })
         rightParts.forEach(function (transaction) {
           transaction = transaction.trim()
@@ -293,6 +297,9 @@ const parser = async function (input, config) {
 
           let result = parseTransaction(transaction, config, '+', amount, commodity)
           output += result.line
+          if (typeof result.amount === 'number') {
+            amount = Math.abs(result.amount) > amount ? Math.abs(result.amount) : amount
+          }
         })
       }
 
@@ -307,6 +314,9 @@ const parser = async function (input, config) {
           if (!transaction.trim()) return
           let result = parseTransaction(transaction, config, null)
           output += result.line
+          if (typeof result.amount === 'number') {
+            amount = Math.abs(result.amount) > amount ? Math.abs(result.amount) : amount
+          }
         })
       }
 
@@ -316,6 +326,7 @@ const parser = async function (input, config) {
     date,
     command,
     sync: command && command !== '//' && command !== '$',
+    amount,
     tags,
     links,
     output

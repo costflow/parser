@@ -98,6 +98,13 @@ test('Transaction #1.9', async () => {
   Assets:US:BofA:Checking                       +2015.50 USD`)
 })
 
+test('Transaction #1.10', async () => {
+  const data = await costflow.parse('@麦当劳 #food #mc 180 CNY cmb > food', testConfig)
+  expect(data.output).toBe(`${today} * "麦当劳" "" #food #mc #costflow
+  Liabilities:CreditCard:CMB                     -180.00 CNY
+  Expenses:Food                                  +180.00 CNY`)
+})
+
 // Use |
 
 test('Transaction #2.1', async () => {
@@ -164,6 +171,13 @@ test('Transaction #2.9', async () => {
   Assets:ETrade:AAPL                             -10.00 AAPL {191.55 USD} @ 201.55 USD
   Income:Etrade:CapitalGains                     -100.00 USD
   Assets:US:BofA:Checking                       +2015.50 USD`)
+})
+
+test('Transaction #2.10', async () => {
+  const data = await costflow.parse('@麦当劳 #food #mc | cmb -180 CNY | food 180 CNY', testConfig)
+  expect(data.output).toBe(`${today} * "麦当劳" "" #food #mc #costflow
+  Liabilities:CreditCard:CMB                     -180.00 CNY
+  Expenses:Food                                  +180.00 CNY`)
 })
 
 /*
