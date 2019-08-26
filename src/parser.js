@@ -1,6 +1,6 @@
 /*
   Syntax: https://github.com/costflow/syntax
-  Version: 0.0.1
+  Version: 0.1
 */
 
 const { DateTime } = require('luxon')
@@ -12,12 +12,12 @@ const parseTransaction = function (transaction, config, defaultSign, calculatedA
   transaction = transaction.trim()
   if (!transaction) return {}
 
-  let atPriceCost = transaction.match(/@(.*)([A-Z])\b/g)
+  const atPriceCost = transaction.match(/@(.*)([A-Z])\b/g)
   if (atPriceCost) {
     transaction = transaction.replace(atPriceCost[0], '')
   }
 
-  let heldAtCost = transaction.match(/{([^}]+)}/g)
+  const heldAtCost = transaction.match(/{([^}]+)}/g)
   if (heldAtCost) {
     transaction = transaction.replace(heldAtCost[0], '')
   }
@@ -26,7 +26,7 @@ const parseTransaction = function (transaction, config, defaultSign, calculatedA
   if (calculatedCommodity) {
     commodity = calculatedCommodity
   } else {
-    commodity = transaction.match(/[A-Z]+(?:\s|$)/g)
+    commodity = transaction.match(/\s[A-Z]+(?:\s|$)/g)
     commodity = commodity ? commodity[0] : config.currency
   }
 
@@ -39,12 +39,12 @@ const parseTransaction = function (transaction, config, defaultSign, calculatedA
   }
 
   let account = transaction.replace(commodity, '').replace(amount, '').trim()
-  account = config.replacement[account] || account
+  account = account.indexOf(':') > 0 ? account : (config.replacement[account] || account)
   let startPart = ''
   startPart += Array(config.indent).fill(' ').join('')
   startPart += `${account}`
 
-  let endPart = `${defaultSign || (Number(amount) > 0 ? '+' : '')}${Number(amount).toFixed(2)} ${commodity.trim()}`
+  const endPart = `${defaultSign || (Number(amount) > 0 ? '+' : '')}${Number(amount).toFixed(2)} ${commodity.trim()}`
   let line = `\n${startPart} ${Array(Math.max(config.lineLength - startPart.length - endPart.length - 2, 1)).fill(' ').join('')} ${endPart.trim()}`
 
   if (heldAtCost) {
@@ -63,7 +63,7 @@ const parseTransaction = function (transaction, config, defaultSign, calculatedA
 }
 
 const parser = async function (input, config) {
-  let backup = input
+  const backup = input
   config = Object.assign({
     mode: 'beancount',
     tag: '#costflow',
@@ -75,27 +75,27 @@ const parser = async function (input, config) {
   let links = []
   let amount = null
 
-  let allCurrencyReg = new RegExp(`\\b(${currencyList.concat(cryptoList).join('|')})\\b`, 'g')
-  let accountReg = new RegExp('(Assets|Liabilities|Equity|Income|Expenses)(?::[a-zA-Z0-9]+)*', 'g')
+  const allCurrencyReg = new RegExp(`\\b(${currencyList.concat(cryptoList).join('|')})\\b`, 'g')
+  const accountReg = new RegExp('(Assets|Liabilities|Equity|Income|Expenses)(?::[a-zA-Z0-9]+)*', 'g')
 
   // date
-  let dateReg = /^(\d{4})-(\d{2})-(\d{2})/g
-  let today = config.timezone ? DateTime.local().setZone(config.timezone).toFormat('y-LL-dd') : DateTime.local().toFormat('y-LL-dd')
+  const dateReg = /^(\d{4})-(\d{2})-(\d{2})/g
+  const today = config.timezone ? DateTime.local().setZone(config.timezone).toFormat('y-LL-dd') : DateTime.local().toFormat('y-LL-dd')
   let date = input.match(dateReg) && input.match(dateReg).length ? input.match(dateReg)[0] : null
   input = date ? input.slice(date.length).trim() : input.trim()
   date = date || today
 
   // commands
-  let commandReg = /^(\*|!|;|\/\/|open|close|pad|\$|balance|price|commodity|note|event|option)/g
+  const commandReg = /^(\*|!|;|\/\/|open|close|pad|\$|balance|price|commodity|note|event|option)/g
   let command = input.match(commandReg) && input.match(commandReg).length ? input.match(commandReg)[0] : null
   input = command ? input.slice(command.length).trim() : input.trim()
 
-  let amountReg = /\b[+-]?(\d*\.)?\d+\b/g
+  const amountReg = /\b[+-]?(\d*\.)?\d+\b/g
   let amounts = input.match(amountReg)
   amounts = amounts ? amounts.map(n => Number(n)) : amounts
 
-  let doubleQuotesReg = /".*?"/g
-  let doubleQuotes = input.match(doubleQuotesReg)
+  const doubleQuotesReg = /".*?"/g
+  const doubleQuotes = input.match(doubleQuotesReg)
 
   // beancount
   let output = ''
@@ -112,7 +112,7 @@ const parser = async function (input, config) {
       output = `${date} ${command} ${input}`
       break
     case 'option':
-      let currencyInOption = input.match(currencyReg)
+      const currencyInOption = input.match(currencyReg)
       if (doubleQuotes) {
         output = `${command} ${input}`
       } else if (currencyInOption) {
@@ -133,10 +133,10 @@ const parser = async function (input, config) {
       output = `${date} ${command} ${accountInNote} ${doubleQuotes ? input : '"' + input + '"'}`
       break
     case 'balance':
-      let tmpBalanceArr = input.split(' ')
+      const tmpBalanceArr = input.split(' ')
       let accountInBalance = tmpBalanceArr[0]
-      let lastWordInBalance = tmpBalanceArr[tmpBalanceArr.length - 1]
-      let isLastWordInBalanceNumber = lastWordInBalance.match(/[+-]?(\d*\.)?\d+(?:\s|$)/g)
+      const lastWordInBalance = tmpBalanceArr[tmpBalanceArr.length - 1]
+      const isLastWordInBalanceNumber = lastWordInBalance.match(/[+-]?(\d*\.)?\d+(?:\s|$)/g)
       if (config.replacement[accountInBalance]) {
         input = input.slice(accountInBalance.length).trim()
         accountInBalance = config.replacement[accountInBalance]
@@ -147,42 +147,42 @@ const parser = async function (input, config) {
       output = `${date} ${command} ${accountInBalance} ${isLastWordInBalanceNumber ? input + ' ' + config.currency : input}`
       break
     case 'pad':
-      let tmpPadArr = input.split(' ')
+      const tmpPadArr = input.split(' ')
       output = `${date} ${command} `
       tmpPadArr.forEach(function (str, index) {
         output += (config.replacement[str] || str) + (index === tmpPadArr.length - 1 ? '' : ' ')
       })
       break
     case 'price':
-      let currencyInPrice = input.match(allCurrencyReg) || []
+      const currencyInPrice = input.match(allCurrencyReg) || []
       if (amounts) {
         output = `${date} ${command} ${input}`
       } else if (currencyInPrice.length === 2 || (currencyInPrice.length === 1 && currencyInPrice[0] !== config.currency)) {
-        let exchange = await alphavantage.exchange(config.alphavantage, currencyInPrice[0], currencyInPrice[1] || config.currency)
+        const exchange = await alphavantage.exchange(config.alphavantage, currencyInPrice[0], currencyInPrice[1] || config.currency)
         if (exchange) {
           output = `${date} ${command} ${currencyInPrice[0]} ${exchange.rate} ${currencyInPrice[1] || config.currency}`
         }
       } else {
-        let quote = await alphavantage.quote(config.alphavantage, input.trim())
+        const quote = await alphavantage.quote(config.alphavantage, input.trim())
         if (quote) {
           output = `${date} ${command} ${input.trim()} ${quote.price} ${config.currency}`
         }
       }
       break
     case '$':
-      let currencyInSnap = input.match(allCurrencyReg) || []
+      const currencyInSnap = input.match(allCurrencyReg) || []
       let amountInSnap = 1
       if (amounts) {
         amountInSnap = amounts[0]
       }
       if (currencyInSnap.length === 2 || (currencyInSnap.length === 1 && currencyInSnap[0] !== config.currency)) {
-        let exchange = await alphavantage.exchange(config.alphavantage, currencyInSnap[0], currencyInSnap[1] || config.currency)
+        const exchange = await alphavantage.exchange(config.alphavantage, currencyInSnap[0], currencyInSnap[1] || config.currency)
         if (exchange) {
           output = `${amountInSnap} ${currencyInSnap[0]} = ${Number(exchange.rate * amountInSnap).toFixed(2)} ${currencyInSnap[1] || config.currency}`
         }
       } else {
-        let symbolInSnap = input.replace(amountInSnap, '').trim()
-        let quote = await alphavantage.quote(config.alphavantage, symbolInSnap)
+        const symbolInSnap = input.replace(amountInSnap, '').trim()
+        const quote = await alphavantage.quote(config.alphavantage, symbolInSnap)
         if (quote) {
           output = `${symbolInSnap} ${quote.price} (${quote.percent})`
           if (amountInSnap > 1) {
@@ -195,7 +195,7 @@ const parser = async function (input, config) {
       if (doubleQuotes) {
         output = `${date} ${command} ${input}`
       } else {
-        let eventParts = input.split(' ')
+        const eventParts = input.split(' ')
         output = `${date} ${command} "${eventParts.splice(0, 1)}" "${eventParts.join(' ')}"`
       }
       break
@@ -210,10 +210,10 @@ const parser = async function (input, config) {
       command = command || '*'
 
       // Parse the first line of a transaction: flag/payee/narration/tag/link
-      let transactionFlag = command
+      const transactionFlag = command
       let payee
 
-      let tmpTransactionArr = input.split(' ')
+      const tmpTransactionArr = input.split(' ')
       tmpTransactionArr.forEach(function (word) {
         if (word[0] === '#') {
           tags.push(word.replace('#', ''))
@@ -224,12 +224,12 @@ const parser = async function (input, config) {
         }
       })
       if (config.tag) {
-        let configTags = config.tag.split(' ').map(tag => tag.replace('#', ''))
+        const configTags = config.tag.split(' ').map(tag => tag.replace('#', ''))
         tags = tags.concat(configTags)
       }
 
       if (config.link) {
-        let configLinks = config.link.map(tag => tag.replace('^', ''))
+        const configLinks = config.link.map(tag => tag.replace('^', ''))
         links = links.concat(configLinks)
       }
 
@@ -241,13 +241,13 @@ const parser = async function (input, config) {
         })
       } else {
         // find text before amount or |
-        let amoutExec = amountReg.exec(input)
-        let pipeExec = /\|/g.exec(input)
+        const amoutExec = amountReg.exec(input)
+        const pipeExec = /\|/g.exec(input)
 
-        let position = Math.min(amoutExec ? amoutExec.index : input.length, pipeExec ? pipeExec.index : input.length)
+        const position = Math.min(amoutExec ? amoutExec.index : input.length, pipeExec ? pipeExec.index : input.length)
         let firstLine = input.slice(0, position)
         input = input.slice(position).trim()
-        let tmpFirstLineArr = firstLine.split(' ')
+        const tmpFirstLineArr = firstLine.split(' ')
         tmpFirstLineArr.forEach(function (word) {
           if (word[0] === '@') {
             payee = word.replace('@', '')
@@ -267,17 +267,17 @@ const parser = async function (input, config) {
 
       // Parse accounts and amounts
       // parse transactions has '>'
-      let flowReg = /\s>\s/g
-      let flowSign = input.match(flowReg)
+      const flowReg = /\s>\s/g
+      const flowSign = input.match(flowReg)
 
       if (flowSign) {
-        let leftParts = (input.split(' > ')[0]).split(' + ')
-        let rightParts = (input.split(' > ')[1] || '').split(' + ')
+        const leftParts = (input.split(' > ')[0]).split(' + ')
+        const rightParts = (input.split(' > ')[1] || '').split(' + ')
 
         let leftAmount = 0
         let leftCommodity
         leftParts.forEach(function (transaction) {
-          let result = parseTransaction(transaction, config, '-')
+          const result = parseTransaction(transaction, config, '-')
           leftAmount -= result.amount
           leftCommodity = result.commodity
           output += result.line
@@ -285,17 +285,21 @@ const parser = async function (input, config) {
             amount = Math.abs(result.amount) > amount ? Math.abs(result.amount) : amount
           }
         })
-        rightParts.forEach(function (transaction) {
+        let rightAmount = 0 - leftAmount
+        rightParts.forEach(function (transaction, index) {
           transaction = transaction.trim()
-          let commodity = transaction.match(/\b[A-Z]+\b/g)
-          commodity = commodity ? commodity[0] : leftCommodity
+          let commodity = transaction.match(/\s[A-Z]+(?:\s|$)/g)
+          commodity = commodity ? commodity[0].trim() : leftCommodity
 
-          let amount = transaction.match(/^(\d*\.)?\d+/g)
+          const amountArr = transaction.match(/^(\d*\.)?\d+/g)
+          let amount = amountArr ? amountArr[0] : null
           if (!amount) {
-            amount = ((0 - leftAmount) / rightParts.length).toFixed(2)
+            amount = (rightAmount / (rightParts.length - index)).toFixed(2)
+            rightAmount -= amount
+          } else {
+            rightAmount -= Number(amount)
           }
-
-          let result = parseTransaction(transaction, config, '+', amount, commodity)
+          const result = parseTransaction(transaction, config, '+', amount, commodity)
           output += result.line
           if (typeof result.amount === 'number') {
             amount = Math.abs(result.amount) > amount ? Math.abs(result.amount) : amount
@@ -305,14 +309,14 @@ const parser = async function (input, config) {
 
       // parse transactions has '|'
 
-      let pipeReg = /\s\|\s/g
-      let pipeSign = input.match(pipeReg)
+      const pipeReg = /\s\|\s/g
+      const pipeSign = input.match(pipeReg)
 
       if (pipeSign) {
-        let pipeParts = input.split('|')
+        const pipeParts = input.split('|')
         pipeParts.forEach(function (transaction) {
           if (!transaction.trim()) return
-          let result = parseTransaction(transaction, config, null)
+          const result = parseTransaction(transaction, config, null)
           output += result.line
           if (typeof result.amount === 'number') {
             amount = Math.abs(result.amount) > amount ? Math.abs(result.amount) : amount
@@ -322,7 +326,7 @@ const parser = async function (input, config) {
 
       break
   }
-  let result = {
+  const result = {
     date,
     command,
     sync: command && command !== '//' && command !== '$',
