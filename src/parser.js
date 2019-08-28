@@ -4,6 +4,7 @@
 */
 
 const { DateTime } = require('luxon')
+const dayjs = require('dayjs')
 const { currencyList, currencyReg } = require('../config/currency-codes')
 const { cryptoList } = require('../config/crypto-currency-codes')
 const alphavantage = require('./alphavantage')
@@ -79,11 +80,43 @@ const parser = async function (input, config) {
   const accountReg = new RegExp('(Assets|Liabilities|Equity|Income|Expenses)(?::[a-zA-Z0-9]+)*', 'g')
 
   // date
-  const dateReg = /^(\d{4})-(\d{2})-(\d{2})/g
+  const ymdReg = /^(\d{4})-(\d{2})-(\d{2})\s/g
   const today = config.timezone ? DateTime.local().setZone(config.timezone).toFormat('y-LL-dd') : DateTime.local().toFormat('y-LL-dd')
-  let date = input.match(dateReg) && input.match(dateReg).length ? input.match(dateReg)[0] : null
+  let date = input.match(ymdReg) && input.match(ymdReg).length ? input.match(ymdReg)[0].trim() : null
   input = date ? input.slice(date.length).trim() : input.trim()
+
+  const monthNameReg = /^(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})\s/g
+  if (input.match(monthNameReg) && input.match(monthNameReg).length) {
+    date = dayjs(`${input.match(monthNameReg)[0]} ${today.substring(0, 4)}`).format('YYYY-MM-DD')
+    input = input.slice(input.match(monthNameReg)[0].length).trim()
+  }
+
+  const shortDateReg = /^(dby|ytd|yesterday|tmr|tomorrow|dat)/g
+  if (input.match(shortDateReg) && input.match(shortDateReg).length) {
+    const dateStr = input.match(shortDateReg)[0]
+    let dateNum = 0
+    switch (dateStr) {
+      case 'dby':
+        dateNum = -2
+        break
+      case 'ytd':
+      case 'yesterday':
+        dateNum = -1
+        break
+      case 'tmr':
+      case 'tomorrow':
+        dateNum = 1
+        break
+      case 'dat':
+        dateNum = 2
+        break
+    }
+    date = dayjs(today).add(dateNum, 'day').format('YYYY-MM-DD')
+    input = input.slice(dateStr.length).trim()
+  }
+
   date = date || today
+  input = input.trim()
 
   // commands
   const commandReg = /^(\*|!|;|\/\/|open|close|pad|\$|balance|price|commodity|note|event|option)/g
@@ -229,11 +262,12 @@ const parser = async function (input, config) {
       }
 
       if (config.link) {
-        const configLinks = config.link.map(tag => tag.replace('^', ''))
+        const configLinks = config.link.split(' ').map(tag => tag.replace('^', ''))
         links = links.concat(configLinks)
       }
 
       output = `${date} ${transactionFlag}`
+
       if (doubleQuotes) {
         output += ` ${doubleQuotes.join(' ')}`
         doubleQuotes.forEach(function (quote) {
@@ -263,6 +297,17 @@ const parser = async function (input, config) {
       }
       if (links.length) {
         output += ` ^${links.join(' ^')}`
+      }
+
+      if (config.insertTime === 'metadata') {
+        const now = DateTime.local().setZone(config.timezone)
+        let timeOrDatetime = now.toFormat('HH:mm:ss')
+        if (now.toFormat('y-LL-dd') !== date) {
+          timeOrDatetime = now.toFormat('y-LL-dd HH:mm:ss')
+        }
+        output += '\n'
+        output += Array(config.indent).fill(' ').join('')
+        output += `time: "${timeOrDatetime}"`
       }
 
       // Parse accounts and amounts

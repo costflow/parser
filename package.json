@@ -1,6 +1,6 @@
 {
   "name": "costflow",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Costflow Parser",
   "main": "index.js",
   "scripts": {
@@ -10,7 +10,14 @@
     "type": "git",
     "url": "git+https://github.com/costflow/parser.git"
   },
-  "keywords": ["costflow", "ledger", "beancount", "hledger", "plain text accounting", "double-entry bookkeeping"],
+  "keywords": [
+    "costflow",
+    "ledger",
+    "beancount",
+    "hledger",
+    "plain text accounting",
+    "double-entry bookkeeping"
+  ],
   "author": "leplay",
   "bugs": {
     "url": "https://github.com/costflow/parser/issues"
@@ -22,6 +29,7 @@
   },
   "dependencies": {
     "axios": "^0.19.0",
+    "dayjs": "^1.8.16",
     "luxon": "^1.16.0"
   },
   "devDependencies": {
