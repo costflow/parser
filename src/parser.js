@@ -4,6 +4,7 @@
 
 const { DateTime } = require('luxon')
 const dayjs = require('dayjs')
+const engine = require('./template-engine')
 const { currencyList, currencyReg } = require('../config/currency-codes')
 const { cryptoList } = require('../config/crypto-currency-codes')
 const alphavantage = require('./alphavantage')
@@ -129,6 +130,34 @@ const parser = async function (input, config) {
 
   const doubleQuotesReg = /".*?"/g
   const doubleQuotes = input.match(doubleQuotesReg)
+
+  if (command === null && config.formula && config.formula[input.split(' ')[0]]) {
+    command = 'f'
+  }
+
+  // Formula
+  if (command === 'f') {
+    const formulaName = input.split(' ')[0]
+    if (config.formula[formulaName]) {
+      const formulaResult = engine.render(config.formula[formulaName], {
+        amount: amounts ? amounts[0] : '',
+        pre: input.slice(formulaName.length).trim()
+      })
+
+      // formulaResult should not be a formula command
+      const commandInFormulaResult = formulaResult.match(commandReg) && formulaResult.match(commandReg).length ? formulaResult.match(commandReg)[0] : null
+      if (commandInFormulaResult === 'f' || (commandInFormulaResult === null && config.formula && config.formula[formulaResult.split(' ')[0]])) {
+        error = 'FORMULA_LOOP'
+        return { error }
+      }
+
+      parser(formulaResult, config)
+      return
+    } else {
+      error = 'FORMULA_NOT_FOUND'
+      return { error }
+    }
+  }
 
   // beancount
   let output = ''
@@ -408,11 +437,10 @@ const parser = async function (input, config) {
       break
     }
   }
-  const result = {
-    error,
+  const result = error ? { error } : {
     date,
     command,
-    sync: command && command !== '//' && command !== '$' && !error,
+    sync: command && command !== '//' && command !== '$',
     amount,
     tags,
     links,

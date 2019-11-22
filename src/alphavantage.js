@@ -4,7 +4,7 @@ var { DateTime } = require('luxon')
 const exchange = function (key, from, to) {
   return new Promise(function (resolve, reject) {
     if (!key) {
-      reject(Error('NO_ALPHA_VANTAGE_KEY'))
+      reject(Error('ALPHA_VANTAGE_KEY_NOT_EXIST'))
     } else {
       axios.get(`https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${from}&to_currency=${to}&apikey=${key}`)
         .then(function (response) {
