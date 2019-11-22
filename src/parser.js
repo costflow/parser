@@ -1,6 +1,5 @@
 /*
-  Syntax: https://github.com/costflow/syntax
-  Version: 0.1
+  Costflow Syntax: https://docs.costflow.io/syntax/
 */
 
 const { DateTime } = require('luxon')
@@ -75,6 +74,7 @@ const parser = async function (input, config) {
   let tags = []
   let links = []
   let amount = null
+  let error = false
 
   const allCurrencyReg = new RegExp(`\\b(${currencyList.concat(cryptoList).join('|')})\\b`, 'g')
   const accountReg = new RegExp('(Assets|Liabilities|Equity|Income|Expenses)(?::[a-zA-Z0-9]+)*', 'g')
@@ -119,7 +119,7 @@ const parser = async function (input, config) {
   input = input.trim()
 
   // commands
-  const commandReg = /^(\*|!|;|\/\/|open|close|pad|\$|balance|price|commodity|note|event|option)/g
+  const commandReg = /^(\*|!|;|\/\/|f|open|close|pad|\$|balance|price|commodity|note|event|option)/g
   let command = input.match(commandReg) && input.match(commandReg).length ? input.match(commandReg)[0] : null
   input = command ? input.slice(command.length).trim() : input.trim()
 
@@ -133,18 +133,21 @@ const parser = async function (input, config) {
   // beancount
   let output = ''
   switch (command) {
-    case ';':
+    case ';': {
       output = `${backup}`
       break
-    case '//':
+    }
+    case '//': {
       output = `${backup.replace('//', '').trim()}`
       break
+    }
     case 'open':
     case 'close':
-    case 'commodity':
+    case 'commodity': {
       output = `${date} ${command} ${input}`
       break
-    case 'option':
+    }
+    case 'option': {
       const currencyInOption = input.match(currencyReg)
       if (doubleQuotes) {
         output = `${command} ${input}`
@@ -154,7 +157,8 @@ const parser = async function (input, config) {
         output = `${command} "title" "${input}"`
       }
       break
-    case 'note':
+    }
+    case 'note': {
       let accountInNote = input.split(' ')[0]
       if (config.replacement[accountInNote]) {
         input = input.slice(accountInNote.length).trim()
@@ -165,7 +169,8 @@ const parser = async function (input, config) {
       }
       output = `${date} ${command} ${accountInNote} ${doubleQuotes ? input : '"' + input + '"'}`
       break
-    case 'balance':
+    }
+    case 'balance': {
       const tmpBalanceArr = input.split(' ')
       let accountInBalance = tmpBalanceArr[0]
       const lastWordInBalance = tmpBalanceArr[tmpBalanceArr.length - 1]
@@ -179,43 +184,74 @@ const parser = async function (input, config) {
       }
       output = `${date} ${command} ${accountInBalance} ${isLastWordInBalanceNumber ? input + ' ' + config.currency : input}`
       break
-    case 'pad':
+    }
+    case 'pad': {
       const tmpPadArr = input.split(' ')
       output = `${date} ${command} `
       tmpPadArr.forEach(function (str, index) {
         output += (config.replacement[str] || str) + (index === tmpPadArr.length - 1 ? '' : ' ')
       })
       break
-    case 'price':
+    }
+    case 'price': {
       const currencyInPrice = input.match(allCurrencyReg) || []
       if (amounts) {
         output = `${date} ${command} ${input}`
       } else if (currencyInPrice.length === 2 || (currencyInPrice.length === 1 && currencyInPrice[0] !== config.currency)) {
-        const exchange = await alphavantage.exchange(config.alphavantage, currencyInPrice[0], currencyInPrice[1] || config.currency)
+        let exchange
+        try {
+          exchange = await alphavantage.exchange(config.alphavantage, currencyInPrice[0], currencyInPrice[1] || config.currency)
+        } catch (err) {
+          error = err.message
+          break
+        }
+
         if (exchange) {
           output = `${date} ${command} ${currencyInPrice[0]} ${exchange.rate} ${currencyInPrice[1] || config.currency}`
         }
       } else {
-        const quote = await alphavantage.quote(config.alphavantage, input.trim())
+        let quote
+        try {
+          quote = await alphavantage.quote(config.alphavantage, input.trim())
+        } catch (err) {
+          error = err.message
+          break
+        }
+
         if (quote) {
           output = `${date} ${command} ${input.trim()} ${quote.price} ${config.currency}`
         }
       }
       break
-    case '$':
+    }
+    case '$': {
       const currencyInSnap = input.match(allCurrencyReg) || []
       let amountInSnap = 1
       if (amounts) {
         amountInSnap = amounts[0]
       }
       if (currencyInSnap.length === 2 || (currencyInSnap.length === 1 && currencyInSnap[0] !== config.currency)) {
-        const exchange = await alphavantage.exchange(config.alphavantage, currencyInSnap[0], currencyInSnap[1] || config.currency)
+        let exchange
+        try {
+          exchange = await alphavantage.exchange(config.alphavantage, currencyInSnap[0], currencyInSnap[1] || config.currency)
+        } catch (err) {
+          error = err.message
+          break
+        }
+
         if (exchange) {
           output = `${amountInSnap} ${currencyInSnap[0]} = ${Number(exchange.rate * amountInSnap).toFixed(2)} ${currencyInSnap[1] || config.currency}`
         }
       } else {
         const symbolInSnap = input.replace(amountInSnap, '').trim()
-        const quote = await alphavantage.quote(config.alphavantage, symbolInSnap)
+        let quote
+        try {
+          quote = await alphavantage.quote(config.alphavantage, symbolInSnap)
+        } catch (err) {
+          error = err.message
+          break
+        }
+
         if (quote) {
           output = `${symbolInSnap} ${quote.price} (${quote.percent})`
           if (amountInSnap > 1) {
@@ -224,7 +260,8 @@ const parser = async function (input, config) {
         }
       }
       break
-    case 'event':
+    }
+    case 'event': {
       if (doubleQuotes) {
         output = `${date} ${command} ${input}`
       } else {
@@ -232,7 +269,8 @@ const parser = async function (input, config) {
         output = `${date} ${command} "${eventParts.splice(0, 1)}" "${eventParts.join(' ')}"`
       }
       break
-    default:
+    }
+    default: {
       // Transactions
       // Save as comment if message has no command and no amount
       if (!amounts) {
@@ -353,7 +391,6 @@ const parser = async function (input, config) {
       }
 
       // parse transactions has '|'
-
       const pipeReg = /\s\|\s/g
       const pipeSign = input.match(pipeReg)
 
@@ -368,13 +405,14 @@ const parser = async function (input, config) {
           }
         })
       }
-
       break
+    }
   }
   const result = {
+    error,
     date,
     command,
-    sync: command && command !== '//' && command !== '$',
+    sync: command && command !== '//' && command !== '$' && !error,
     amount,
     tags,
     links,
