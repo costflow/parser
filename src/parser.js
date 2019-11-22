@@ -139,20 +139,20 @@ const parser = async function (input, config) {
   if (command === 'f') {
     const formulaName = input.split(' ')[0]
     if (config.formula[formulaName]) {
-      const formulaResult = engine.render(config.formula[formulaName], {
+      const formulaParseResult = engine.render(config.formula[formulaName], {
         amount: amounts ? amounts[0] : '',
         pre: input.slice(formulaName.length).trim()
       })
 
-      // formulaResult should not be a formula command
-      const commandInFormulaResult = formulaResult.match(commandReg) && formulaResult.match(commandReg).length ? formulaResult.match(commandReg)[0] : null
-      if (commandInFormulaResult === 'f' || (commandInFormulaResult === null && config.formula && config.formula[formulaResult.split(' ')[0]])) {
+      // formulaParseResult should not be a formula command
+      const commandInFormulaResult = formulaParseResult.match(commandReg) && formulaParseResult.match(commandReg).length ? formulaParseResult.match(commandReg)[0] : null
+      if (commandInFormulaResult === 'f' || (commandInFormulaResult === null && config.formula && config.formula[formulaParseResult.split(' ')[0]])) {
         error = 'FORMULA_LOOP'
         return { error }
       }
 
-      parser(formulaResult, config)
-      return
+      const formulaResult = await parser(formulaParseResult, config)
+      return formulaResult
     } else {
       error = 'FORMULA_NOT_FOUND'
       return { error }

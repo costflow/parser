@@ -28,7 +28,7 @@ const exchange = function (key, from, to) {
 const quote = function (key, symbol) {
   return new Promise(function (resolve, reject) {
     if (!key) {
-      reject(Error('NO_ALPHA_VANTAGE_KEY'))
+      reject(Error('ALPHA_VANTAGE_KEY_NOT_EXIST'))
     } else {
       axios.get(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${key}`)
         .then(function (response) {
