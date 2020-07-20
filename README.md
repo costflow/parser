@@ -2,7 +2,7 @@
 
 Costflow Parser is a library for parsing plain text to Beancount/Ledger/hledger formats. [Costflow](https://www.costflow.io/) use it for parsing messages from messaging apps, and save the results to your ledger file.
 
-[Costflow Syntax](https://github.com/costflow/syntax) Version: v0.2
+[Costflow Syntax](https://github.com/costflow/syntax) Version: v0.3
 
 ## Docs
 [https://docs.costflow.io/parser/](https://docs.costflow.io/parser/)
@@ -22,4 +22,3 @@ Playground: [https://playground.costflow.io](https://playground.costflow.io)
 [https://github.com/orgs/costflow/projects](https://github.com/orgs/costflow/projects)
 
 Check out [Costflow Syntax](https://github.com/costflow/syntax) for more information.
-
