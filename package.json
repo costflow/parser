@@ -3,10 +3,14 @@
   "version": "0.3.3",
   "description": "Costflow Parser",
   "main": "lib/index.js",
+  "browser": "dist/index.min.js",
   "types": "lib/index.d.ts",
   "scripts": {
     "build": "tsc -v && tsc -b",
-    "clean": "rm -rf coverage lib",
+    "clean": "rm -rf coverage lib dist",
+    "package": "webpack --mode development",
+    "package:analyze": "cross-env ANALYZE=true webpack --mode production",
+    "package:prod": "webpack --mode production",
     "test": "npm run build && jest",
     "test:coverage": "npm run build && jest --coverage",
     "watch": "tsc -b --watch"
@@ -38,12 +42,25 @@
     "squirrelly": "^7.8.0"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-class-properties": "^7.10.4",
+    "@babel/plugin-proposal-nullish-coalescing-operator": "^7.10.4",
+    "@babel/plugin-proposal-optional-chaining": "^7.11.0",
+    "@babel/preset-env": "^7.11.5",
+    "@babel/preset-typescript": "^7.10.4",
     "@types/squirrelly": "^7.1.1",
+    "babel-loader": "^8.1.0",
+    "core-js": "^3.6.5",
     "cross-env": "^7.0.2",
+    "fork-ts-checker-webpack-plugin": "^5.2.0",
     "jest": "^24.8.0",
     "jest-circus": "^26.4.2",
+    "path": "^0.12.7",
+    "regenerator-runtime": "^0.13.7",
     "ts-jest": "^26.3.0",
-    "typescript": "^4.0.3"
+    "typescript": "^4.0.3",
+    "webpack": "^4.44.2",
+    "webpack-bundle-analyzer": "^3.9.0",
+    "webpack-cli": "^3.3.12"
   },
   "sideEffects": false
 }
