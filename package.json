@@ -2,9 +2,14 @@
   "name": "costflow",
   "version": "0.3.3",
   "description": "Costflow Parser",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
-    "test": "jest"
+    "build": "tsc -v && tsc -b",
+    "clean": "rm -rf coverage lib",
+    "test": "npm run build && jest",
+    "test:coverage": "npm run build && jest --coverage",
+    "watch": "tsc -b --watch"
   },
   "repository": {
     "type": "git",
@@ -33,6 +38,12 @@
     "squirrelly": "^7.8.0"
   },
   "devDependencies": {
-    "jest": "^24.8.0"
-  }
+    "@types/squirrelly": "^7.1.1",
+    "cross-env": "^7.0.2",
+    "jest": "^24.8.0",
+    "jest-circus": "^26.4.2",
+    "ts-jest": "^26.3.0",
+    "typescript": "^4.0.3"
+  },
+  "sideEffects": false
 }
