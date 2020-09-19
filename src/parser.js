@@ -2,12 +2,17 @@
   Costflow Syntax: https://docs.costflow.io/syntax/
 */
 
-const { DateTime } = require('luxon')
 const dayjs = require('dayjs')
 const engine = require('./template-engine')
 const { currencyList, currencyReg } = require('../config/currency-codes')
 const { cryptoList } = require('../config/crypto-currency-codes')
 const alphavantage = require('./alphavantage')
+
+var utc = require('dayjs/plugin/utc') // dependent on utc plugin
+var timezone = require('dayjs/plugin/timezone')
+dayjs.extend(utc)
+dayjs.extend(timezone)
+
 
 const parseTransaction = function (transaction, config, defaultSign, calculatedAmount, calculatedCommodity) {
   transaction = transaction.trim()
@@ -82,7 +87,8 @@ const parser = async function (input, config) {
 
   // date
   const ymdReg = /^(\d{4})-(\d{2})-(\d{2})\s/g
-  const today = config.timezone ? DateTime.local().setZone(config.timezone).toFormat('y-LL-dd') : DateTime.local().toFormat('y-LL-dd')
+  const now = config.timezone ? dayjs().tz(config.timezone) : dayjs()
+  const today = now.format('YYYY-MM-DD')
   let date = input.match(ymdReg) && input.match(ymdReg).length ? input.match(ymdReg)[0].trim() : null
   input = date ? input.slice(date.length).trim() : input.trim()
 
@@ -367,10 +373,9 @@ const parser = async function (input, config) {
       }
 
       if (config.insertTime === 'metadata') {
-        const now = DateTime.local().setZone(config.timezone)
-        let timeOrDatetime = now.toFormat('HH:mm:ss')
-        if (now.toFormat('y-LL-dd') !== date) {
-          timeOrDatetime = now.toFormat('y-LL-dd HH:mm:ss')
+        let timeOrDatetime = now.format('HH:mm:ss')
+        if (dayjs().format('YYYY-MM-DD') !== date) {
+          timeOrDatetime = now.format('YYYY-MM-DD HH:mm:ss')
         }
         output += '\n'
         output += Array(config.indent).fill(' ').join('')
