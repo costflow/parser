@@ -1,5 +1,10 @@
 const axios = require('axios')
-var { DateTime } = require('luxon')
+const dayjs = require('dayjs')
+
+var utc = require('dayjs/plugin/utc') // dependent on utc plugin
+var timezone = require('dayjs/plugin/timezone')
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 const exchange = function (key, from, to) {
   return new Promise(function (resolve, reject) {
@@ -14,7 +19,7 @@ const exchange = function (key, from, to) {
             const data = response.data['Realtime Currency Exchange Rate']
             const result = {
               rate: Number(data['5. Exchange Rate']),
-              updatedAt: DateTime.fromISO(data['6. Last Refreshed'].replace(' ', 'T'), { zone: response.data['7. Time Zone'] }).ts
+              updatedAt: dayjs.tz(data['6. Last Refreshed'].replace(' ', 'T'), response.data['7. Time Zone']).valueOf()
             }
             resolve(result)
           }
