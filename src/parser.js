@@ -145,7 +145,7 @@ const parser = async function (input, config) {
   if (command === 'f') {
     const formulaName = input.split(' ')[0]
     if (config.formula[formulaName]) {
-      const formulaParseResult = engine.render(config.formula[formulaName], {
+      const formulaParseResult = engine.Render(config.formula[formulaName], {
         amount: amounts ? amounts[0] : '',
         pre: input.slice(formulaName.length).trim()
       })
