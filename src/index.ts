@@ -17,7 +17,7 @@ dayjs.extend(timezone)
 // TODO: Fix variables being numbers and strings interchangeably. JS is forgiving, but also introduces subtle bugs.
 
 // TODO: Fix expecting variables (especially config) to hold values while they may be undefined instead.
-// In TS, operator `!` enforces such expectation, so the goal is to not use it anywhere (currently there are 24 places).
+// In TS, operator `!` enforces such expectation, so the goal is to not use it anywhere (currently there are 17 places).
 
 
 type ArrayElement<ArrayType extends readonly unknown[]> = ArrayType[number];
@@ -57,16 +57,36 @@ export namespace IParseResult {
   }
 }
 
+const REGEX = {
+  CURRENCY: currencyReg,
+  ALL_CURRENCIES: new RegExp(`\\b(${[...currencyList, ...cryptoList].join('|')})\\b`, 'g'),
+  ACCOUNT: new RegExp('(Assets|Liabilities|Equity|Income|Expenses)(?::[a-zA-Z0-9]+)*', 'g'),
+  YMD: /^(\d{4})-(\d{2})-(\d{2})\s/g,
+  MONTH_NAME: /^(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})\s/g,
+  SHORT_DATE: /^(dby|ytd|yesterday|tmr|tomorrow|dat)/g,
+  COMMAND: /^(\*|!|;|\/\/|f|open|close|pad|\$|balance|price|commodity|note|event|option)/g,
+  AMOUNT: /\b[+-]?(\d*\.)?\d+\b/g,
+  AMOUNT_IN_PART: /^(\d*\.)?\d+/g,
+  AMOUNT_IN_POSTING: /[+-]?(\d*\.)?\d+/g,  // TODO: are these three amount's different for a reason?
+  DOUBLE_QUOTES: /".*?"/g,
+  LAST_WORD_IN_BALANCE: /[+-]?(\d*\.)?\d+(?:\s|$)/g,
+  FLOW: /\s>\s/g,
+  COMMODITY: /\s[A-Z]+(?:\s|$)/g,
+  PIPE: /\|/g,
+  AT_PRICE_COST: /@(.*)([A-Z])\b/g,
+  HELD_AT_COST: /{([^}]+)}/g,
+}
+
 export const parseTransaction = function (transaction: string, config: IParseConfig, defaultSign: '+' | '-' | null, calculatedAmount?: string, calculatedCommodity?: string) {
   transaction = transaction.trim()
   if (!transaction) return {}
 
-  const atPriceCost = transaction.match(/@(.*)([A-Z])\b/g)
+  const atPriceCost = transaction.match(REGEX.AT_PRICE_COST)
   if (atPriceCost) {
     transaction = transaction.replace(atPriceCost[0], '')
   }
 
-  const heldAtCost = transaction.match(/{([^}]+)}/g)
+  const heldAtCost = transaction.match(REGEX.HELD_AT_COST)
   if (heldAtCost) {
     transaction = transaction.replace(heldAtCost[0], '')
   }
@@ -75,14 +95,14 @@ export const parseTransaction = function (transaction: string, config: IParseCon
   if (calculatedCommodity) {
     commodity = calculatedCommodity
   } else {
-    commodity = transaction.match(/\s[A-Z]+(?:\s|$)/g)?.[0] ?? config.currency
+    commodity = transaction.match(REGEX.COMMODITY)?.[0] ?? config.currency
   }
 
   let amount
   if (calculatedAmount) {
     amount = calculatedAmount.toString()
   } else {
-    amount = transaction.match(/[+-]?(\d*\.)?\d+/g)
+    amount = transaction.match(REGEX.AMOUNT_IN_POSTING)
     amount = amount ? amount[0] : null
   }
 
@@ -124,25 +144,23 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
   let amount: number | null = null
   let error: string | false = false
 
-  const allCurrencyReg = new RegExp(`\\b(${[...currencyList, ...cryptoList].join('|')})\\b`, 'g')
-  const accountReg = new RegExp('(Assets|Liabilities|Equity|Income|Expenses)(?::[a-zA-Z0-9]+)*', 'g')
 
   // date
-  const ymdReg = /^(\d{4})-(\d{2})-(\d{2})\s/g
   const now = config.timezone ? dayjs().tz(config.timezone) : dayjs()
   const today = now.format('YYYY-MM-DD')
-  let date = input.match(ymdReg) && input.match(ymdReg)!.length ? input.match(ymdReg)![0].trim() : null
+  const ymdReg = input.match(REGEX.YMD)
+  let date = ymdReg?.[0]?.trim() ?? null
   input = date ? input.slice(date.length).trim() : input.trim()
 
-  const monthNameReg = /^(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})\s/g
-  if (input.match(monthNameReg) && input.match(monthNameReg)!.length) {
-    date = dayjs(`${input.match(monthNameReg)![0]} ${today.substring(0, 4)}`).format('YYYY-MM-DD')
-    input = input.slice(input.match(monthNameReg)![0].length).trim()
+  const monthNameReg = input.match(REGEX.MONTH_NAME)
+  if (monthNameReg?.[0]) {
+    date = dayjs(`${monthNameReg[0]} ${today.substring(0, 4)}`).format('YYYY-MM-DD')
+    input = input.slice(monthNameReg[0].length).trim()
   }
 
-  const shortDateReg = /^(dby|ytd|yesterday|tmr|tomorrow|dat)/g
-  if (input.match(shortDateReg) && input.match(shortDateReg)!.length) {
-    const dateStr = input.match(shortDateReg)![0]
+  const shortDateReg = input.match(REGEX.SHORT_DATE)
+  if (shortDateReg?.[0]) {
+    const dateStr = shortDateReg[0]
     let dateNum = 0
     switch (dateStr) {
       case 'dby':
@@ -168,15 +186,13 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
   input = input.trim()
 
   // commands
-  const commandReg = /^(\*|!|;|\/\/|f|open|close|pad|\$|balance|price|commodity|note|event|option)/g
-  let command = input.match(commandReg) && input.match(commandReg)!.length ? input.match(commandReg)![0] : null
+  const commandReg = input.match(REGEX.COMMAND)
+  let command = commandReg?.[0] ?? null
   input = command ? input.slice(command.length).trim() : input.trim()
 
-  const amountReg = /\b[+-]?(\d*\.)?\d+\b/g
-  let amounts = input.match(amountReg)?.map(n => Number(n))
+  let amounts = input.match(REGEX.AMOUNT)?.map(n => Number(n))
 
-  const doubleQuotesReg = /".*?"/g
-  const doubleQuotes = input.match(doubleQuotesReg)
+  const doubleQuotes = input.match(REGEX.DOUBLE_QUOTES)
 
   if (command === null && config.formula && config.formula[input.split(' ')[0]]) {
     command = 'f'
@@ -192,7 +208,7 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
       })
 
       // formulaParseResult should not be a formula command
-      const commandInFormulaResult = formulaParseResult.match(commandReg) && formulaParseResult.match(commandReg)!.length ? formulaParseResult.match(commandReg)![0] : null
+      const commandInFormulaResult = formulaParseResult.match(REGEX.COMMAND)?.[0] ?? null
       if (commandInFormulaResult === 'f' || (commandInFormulaResult === null && config.formula && config.formula[formulaParseResult.split(' ')[0]])) {
         error = 'FORMULA_LOOP'
         return { error }
@@ -239,8 +255,8 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
       if (config.replacement![accountInNote]) {
         input = input.slice(accountInNote.length).trim()
         accountInNote = config.replacement![accountInNote]
-      } else if (input.match(accountReg)) {
-        accountInNote = input.match(accountReg)![0]
+      } else if (input.match(REGEX.ACCOUNT)) {
+        accountInNote = input.match(REGEX.ACCOUNT)![0]
         input = input.slice(accountInNote.length).trim()
       }
       output = `${date} ${command} ${accountInNote} ${doubleQuotes ? input : '"' + input + '"'}`
@@ -250,12 +266,12 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
       const tmpBalanceArr = input.split(' ')
       let accountInBalance = tmpBalanceArr[0]
       const lastWordInBalance = tmpBalanceArr[tmpBalanceArr.length - 1]
-      const isLastWordInBalanceNumber = lastWordInBalance.match(/[+-]?(\d*\.)?\d+(?:\s|$)/g)
+      const isLastWordInBalanceNumber = lastWordInBalance.match(REGEX.LAST_WORD_IN_BALANCE)
       if (config.replacement![accountInBalance]) {
         input = input.slice(accountInBalance.length).trim()
         accountInBalance = config.replacement![accountInBalance]
-      } else if (input.match(accountReg)) {
-        accountInBalance = input.match(accountReg)![0]
+      } else if (input.match(REGEX.ACCOUNT)) {
+        accountInBalance = input.match(REGEX.ACCOUNT)![0]
         input = input.slice(accountInBalance.length).trim()
       }
       output = `${date} ${command} ${accountInBalance} ${isLastWordInBalanceNumber ? input + ' ' + config.currency : input}`
@@ -270,7 +286,7 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
       break
     }
     case 'price': {
-      const currencyInPrice = input.match(allCurrencyReg) || []
+      const currencyInPrice = input.match(REGEX.ALL_CURRENCIES) || []
       if (amounts) {
         output = `${date} ${command} ${input}`
       } else if (currencyInPrice.length === 2 || (currencyInPrice.length === 1 && currencyInPrice[0] !== config.currency)) {
@@ -301,7 +317,7 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
       break
     }
     case '$': {
-      const currencyInSnap = input.match(allCurrencyReg) || []
+      const currencyInSnap = input.match(REGEX.ALL_CURRENCIES) || []
       let amountInSnap = 1
       if (amounts) {
         amountInSnap = Number(amounts[0])
@@ -389,8 +405,8 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
         })
       } else {
         // find text before amount or |
-        const amoutExec = amountReg.exec(input)
-        const pipeExec = /\|/g.exec(input)
+        const amoutExec = REGEX.AMOUNT.exec(input)
+        const pipeExec = REGEX.PIPE.exec(input)
 
         const position = Math.min(amoutExec ? amoutExec.index : input.length, pipeExec ? pipeExec.index : input.length)
         let firstLine = input.slice(0, position)
@@ -425,12 +441,11 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
 
       // Parse accounts and amounts
       // parse transactions has '>'
-      const flowReg = /\s>\s/g
-      const flowSign = input.match(flowReg)
+      const flowSign = input.match(REGEX.FLOW)
 
       if (flowSign) {
-        const leftParts = (input.split(' > ')[0]).split(' + ')
-        const rightParts = (input.split(' > ')[1] || '').split(' + ')
+        const leftParts = (input.split(REGEX.FLOW)[0]).split(' + ')
+        const rightParts = (input.split(REGEX.FLOW)[1] || '').split(' + ')
 
         let leftAmount = 0
         let leftCommodity: string
@@ -446,9 +461,9 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
         let rightAmount = 0 - leftAmount
         rightParts.forEach(function (transaction, index) {
           transaction = transaction.trim()
-          let commodity = transaction.match(/\s[A-Z]+(?:\s|$)/g)?.[0].trim() ?? leftCommodity
+          let commodity = transaction.match(REGEX.COMMODITY)?.[0].trim() ?? leftCommodity
 
-          let amount = transaction.match(/^(\d*\.)?\d+/g)?.[0] ?? null
+          let amount = transaction.match(REGEX.AMOUNT_IN_PART)?.[0] ?? null
           if (!amount) {
             amount = (rightAmount / (rightParts.length - index)).toFixed(2)
             rightAmount -= Number(amount)
@@ -464,11 +479,10 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
       }
 
       // parse transactions has '|'
-      const pipeReg = /\s\|\s/g
-      const pipeSign = input.match(pipeReg)
+      const pipeSign = input.match(REGEX.PIPE)
 
       if (pipeSign) {
-        const pipeParts = input.split('|')
+        const pipeParts = input.split(REGEX.PIPE)
         pipeParts.forEach(function (transaction) {
           if (!transaction.trim()) return
           const result = parseTransaction(transaction, config, null)
