@@ -77,36 +77,36 @@ const REGEX = {
   HELD_AT_COST: /{([^}]+)}/g,
 }
 
-export const parseTransaction = function (transaction: string, config: IParseConfig, defaultSign: '+' | '-' | null, calculatedAmount?: string, calculatedCommodity?: string) {
-  transaction = transaction.trim()
-  if (!transaction) return {}
+export const parsePosting = function (postingString: string, config: IParseConfig, defaultSign: '+' | '-' | null, calculatedAmount?: string, calculatedCommodity?: string) {
+  postingString = postingString.trim()
+  if (!postingString) return {}
 
-  const atPriceCost = transaction.match(REGEX.AT_PRICE_COST)
+  const atPriceCost = postingString.match(REGEX.AT_PRICE_COST)
   if (atPriceCost) {
-    transaction = transaction.replace(atPriceCost[0], '')
+    postingString = postingString.replace(atPriceCost[0], '')
   }
 
-  const heldAtCost = transaction.match(REGEX.HELD_AT_COST)
+  const heldAtCost = postingString.match(REGEX.HELD_AT_COST)
   if (heldAtCost) {
-    transaction = transaction.replace(heldAtCost[0], '')
+    postingString = postingString.replace(heldAtCost[0], '')
   }
 
   let commodity: string | undefined
   if (calculatedCommodity) {
     commodity = calculatedCommodity
   } else {
-    commodity = transaction.match(REGEX.COMMODITY)?.[0] ?? config.currency
+    commodity = postingString.match(REGEX.COMMODITY)?.[0] ?? config.currency
   }
 
   let amount
   if (calculatedAmount) {
     amount = calculatedAmount.toString()
   } else {
-    amount = transaction.match(REGEX.AMOUNT_IN_POSTING)
+    amount = postingString.match(REGEX.AMOUNT_IN_POSTING)
     amount = amount ? amount[0] : null
   }
 
-  let account = transaction.replace(commodity, '').replace(amount!, '').trim()
+  let account = postingString.replace(commodity, '').replace(amount!, '').trim()
   account = account.indexOf(':') > 0 ? account : (config.replacement![account] || account)
   let startPart = ''
   startPart += Array(config.indent).fill(' ').join('')
@@ -449,31 +449,31 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
 
         let leftAmount = 0
         let leftCommodity: string
-        leftParts.forEach(function (transaction) {
-          const result = parseTransaction(transaction, config, '-')
-          leftAmount -= result.amount!
-          leftCommodity = result.commodity!
-          output += result.line
-          if (typeof result.amount === 'number') {
-            amount = (Math.abs(result.amount) > (amount ?? 0)) ? Math.abs(result.amount) : amount
+        leftParts.forEach(function (postingString) {
+          const posting = parsePosting(postingString, config, '-')
+          leftAmount -= posting.amount!
+          leftCommodity = posting.commodity!
+          output += posting.line
+          if (typeof posting.amount === 'number') {
+            amount = (Math.abs(posting.amount) > (amount ?? 0)) ? Math.abs(posting.amount) : amount
           }
         })
         let rightAmount = 0 - leftAmount
-        rightParts.forEach(function (transaction, index) {
-          transaction = transaction.trim()
-          let commodity = transaction.match(REGEX.COMMODITY)?.[0].trim() ?? leftCommodity
+        rightParts.forEach(function (postingString, index) {
+          postingString = postingString.trim()
+          let commodity = postingString.match(REGEX.COMMODITY)?.[0].trim() ?? leftCommodity
 
-          let amount = transaction.match(REGEX.AMOUNT_IN_PART)?.[0] ?? null
+          let amount = postingString.match(REGEX.AMOUNT_IN_PART)?.[0] ?? null
           if (!amount) {
             amount = (rightAmount / (rightParts.length - index)).toFixed(2)
             rightAmount -= Number(amount)
           } else {
             rightAmount -= Number(amount)
           }
-          const result = parseTransaction(transaction, config, '+', amount, commodity)
-          output += result.line
-          if (typeof result.amount === 'number') {
-            amount = Math.abs(result.amount) > Number(amount) ? String(Math.abs(result.amount)) : amount
+          const posting = parsePosting(postingString, config, '+', amount, commodity)
+          output += posting.line
+          if (typeof posting.amount === 'number') {
+            amount = Math.abs(posting.amount) > Number(amount) ? String(Math.abs(posting.amount)) : amount
           }
         })
       }
@@ -483,12 +483,12 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
 
       if (pipeSign) {
         const pipeParts = input.split(REGEX.PIPE)
-        pipeParts.forEach(function (transaction) {
-          if (!transaction.trim()) return
-          const result = parseTransaction(transaction, config, null)
-          output += result.line
-          if (typeof result.amount === 'number') {
-            amount = (Math.abs(result.amount) > (amount ?? 0)) ? Math.abs(result.amount) : amount
+        pipeParts.forEach(function (postingString) {
+          if (!postingString.trim()) return
+          const posting = parsePosting(postingString, config, null)
+          output += posting.line
+          if (typeof posting.amount === 'number') {
+            amount = (Math.abs(posting.amount) > (amount ?? 0)) ? Math.abs(posting.amount) : amount
           }
         })
       }
