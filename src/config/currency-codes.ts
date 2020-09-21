@@ -2,7 +2,7 @@
   ISO 4217 currency codes source: https://www.iso.org/iso-4217-currency-codes.html
   Currency codes supported by Alpha Vantage: https://www.alphavantage.co/documentation/#digital-currency
 */
-const isoList = [
+export const currencyList = [
   'AED',
   'AFN',
   'ALL',
@@ -182,9 +182,9 @@ const isoList = [
   'ZAR',
   'ZMW',
   'ZWL'
-]
+] as const
 
-const exchangeList = [
+export const exchangeList = [
   'AED',
   'AFN',
   'ALL',
@@ -342,11 +342,7 @@ const exchangeList = [
   'ZAR',
   'ZMW',
   'ZWL'
-]
+] as const
 
-module.exports = {
-  currencyList: isoList,
-  currencyReg: new RegExp(isoList.join('|'), 'g'),
-  exchangeList: exchangeList,
-  exchangeReg: new RegExp(exchangeList.join('|'), 'g')
-}
+export const currencyReg = new RegExp(currencyList.join('|'), 'g')
+export const exchangeReg = new RegExp(exchangeList.join('|'), 'g')

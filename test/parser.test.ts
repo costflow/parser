@@ -1,16 +1,16 @@
-const dayjs = require('dayjs')
-var utc = require('dayjs/plugin/utc') // dependent on utc plugin
-var timezone = require('dayjs/plugin/timezone')
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc' // dependent on utc plugin
+import timezone from 'dayjs/plugin/timezone'
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
-const costflow = require('../index')
-const alphavantage = require('../src/alphavantage')
+import * as costflow from '..'
+import * as alphavantage from '../src/alphavantage'
 
 
 const testConfig = {
-  mode: 'beancount',
-  currency: 'USD',
+  mode: 'beancount' as const,
+  currency: 'USD' as const,
   timezone: 'America/Whitehorse',
   tag: '#costflow',
   replacement: {
@@ -42,48 +42,62 @@ const testConfig = {
 }
 const today = dayjs().tz(testConfig.timezone)
 
+function expectToBeNotError(data: costflow.IParseResult): asserts data is costflow.IParseResult.Result {
+  expect((data as costflow.IParseResult.Error).error).toBe(undefined)
+}
+
 /*
   Part 0: Date
 */
 test('Date #0.1', async () => {
   const data = await costflow.parse('2017-01-05 Lorem Ipsum', testConfig)
+  expectToBeNotError(data)
   expect(data.date).toBe('2017-01-05')
 })
 test('Date #0.2', async () => {
   const data = await costflow.parse('Lorem Ipsum', testConfig)
+  expectToBeNotError(data)
   expect(data.date).toBe(today.format('YYYY-MM-DD'))
 })
 test('Date #0.3', async () => {
   const data = await costflow.parse('ytd Lorem Ipsum', testConfig)
+  expectToBeNotError(data)
   expect(data.date).toBe(today.add(-1, 'd').format('YYYY-MM-DD'))
 })
 test('Date #0.4', async () => {
   const data = await costflow.parse('yesterday Lorem Ipsum', testConfig)
+  expectToBeNotError(data)
   expect(data.date).toBe(today.add(-1, 'd').format('YYYY-MM-DD'))
 })
 test('Date #0.5', async () => {
   const data = await costflow.parse('dby Lorem Ipsum', testConfig)
+  expectToBeNotError(data)
   expect(data.date).toBe(today.add(-2, 'd').format('YYYY-MM-DD'))
 })
 test('Date #0.6', async () => {
   const data = await costflow.parse('tmr Lorem Ipsum', testConfig)
+  expectToBeNotError(data)
   expect(data.date).toBe(today.add(1, 'd').format('YYYY-MM-DD'))
 })
 test('Date #0.7', async () => {
   const data = await costflow.parse('tomorrow Lorem Ipsum', testConfig)
+  expectToBeNotError(data)
   expect(data.date).toBe(today.add(1, 'd').format('YYYY-MM-DD'))
 })
 test('Date #0.8', async () => {
   const data = await costflow.parse('dat Lorem Ipsum', testConfig)
+  expectToBeNotError(data)
   expect(data.date).toBe(today.add(2, 'd').format('YYYY-MM-DD'))
 })
 
 test('Date #0.9', async () => {
   const data = await costflow.parse('Aug 9 Lorem Ipsum', testConfig)
+  expectToBeNotError(data)
   expect(data.date).toBe(`${today.year()}-08-09`)
 })
 test('Date #1.0', async () => {
   const data = await costflow.parse('July 07 Lorem Ipsum', testConfig)
+  expectToBeNotError(data)
   expect(data.date).toBe(`${today.year()}-07-07`)
 })
 
@@ -95,12 +109,14 @@ test('Date #1.0', async () => {
 // Use >
 test('Transaction #1.1', async () => {
   const data = await costflow.parse('2017-01-05 "RiverBank Properties" "Paying the rent" 2400 Assets:US:BofA:Checking > 2400  Expenses:Home:Rent', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`2017-01-05 * "RiverBank Properties" "Paying the rent" #costflow
   Assets:US:BofA:Checking                       -2400.00 USD
   Expenses:Home:Rent                            +2400.00 USD`)
 })
 test('Transaction #1.2', async () => {
   const data = await costflow.parse('@Verizon 59.61 Assets:US:BofA:Checking > Expenses:Home:Phone', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Verizon" "" #costflow
   Assets:US:BofA:Checking                         -59.61 USD
   Expenses:Home:Phone                             +59.61 USD`)
@@ -108,6 +124,7 @@ test('Transaction #1.2', async () => {
 
 test('Transaction #1.3', async () => {
   const data = await costflow.parse('@Verizon 59.61 bofa > phone', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Verizon" "" #costflow
   Assets:US:BofA:Checking                         -59.61 USD
   Expenses:Home:Phone                             +59.61 USD`)
@@ -115,6 +132,7 @@ test('Transaction #1.3', async () => {
 
 test('Transaction #1.4', async () => {
   const data = await costflow.parse('Rent 750 cmb + 750 boc > rent', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Rent" #costflow
   Liabilities:CreditCard:CMB                     -750.00 USD
   Assets:CN:BOC                                  -750.00 USD
@@ -123,6 +141,7 @@ test('Transaction #1.4', async () => {
 
 test('Transaction #1.5', async () => {
   const data = await costflow.parse('Dinner 180 CNY cmb > rx + ry + food', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Dinner" #costflow
   Liabilities:CreditCard:CMB                     -180.00 CNY
   Assets:Receivables:X                            +60.00 CNY
@@ -132,6 +151,7 @@ test('Transaction #1.5', async () => {
 
 test('Transaction #1.6', async () => {
   const data = await costflow.parse('Transfer to account in US 5000 CNY @ 7.2681 USD boc > 726.81 USD bofa', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Transfer to account in US" #costflow
   Assets:CN:BOC                                 -5000.00 CNY @ 7.2681 USD
   Assets:US:BofA:Checking                        +726.81 USD`)
@@ -139,6 +159,7 @@ test('Transaction #1.6', async () => {
 
 test('Transaction #1.7', async () => {
   const data = await costflow.parse('Transfer to account in US 5000 CNY @@ 726.81 USD boc > 726.81 USD bofa', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Transfer to account in US" #costflow
   Assets:CN:BOC                                 -5000.00 CNY @@ 726.81 USD
   Assets:US:BofA:Checking                        +726.81 USD`)
@@ -146,6 +167,7 @@ test('Transaction #1.7', async () => {
 
 test('Transaction #1.8', async () => {
   const data = await costflow.parse('Bought shares of Apple 1915.5 bofa > 10 AAPL {191.55 USD} aapl', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Bought shares of Apple" #costflow
   Assets:US:BofA:Checking                       -1915.50 USD
   Assets:ETrade:AAPL                             +10.00 AAPL {191.55 USD}`)
@@ -153,6 +175,7 @@ test('Transaction #1.8', async () => {
 
 test('Transaction #1.9', async () => {
   const data = await costflow.parse('Sold shares of Apple 10 AAPL {191.55 USD} @ 201.55 USD aapl + 100 USD cg > 2015.5 bofa', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Sold shares of Apple" #costflow
   Assets:ETrade:AAPL                             -10.00 AAPL {191.55 USD} @ 201.55 USD
   Income:Etrade:CapitalGains                     -100.00 USD
@@ -161,6 +184,7 @@ test('Transaction #1.9', async () => {
 
 test('Transaction #1.10', async () => {
   const data = await costflow.parse('@麦当劳 #food #mc 180 CNY cmb > food', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "麦当劳" "" #food #mc #costflow
   Liabilities:CreditCard:CMB                     -180.00 CNY
   Expenses:Food                                  +180.00 CNY`)
@@ -170,12 +194,14 @@ test('Transaction #1.10', async () => {
 
 test('Transaction #2.1', async () => {
   const data = await costflow.parse('2017-01-05 "RiverBank Properties" "Paying the rent" | Assets:US:BofA:Checking -2400 | Expenses:Home:Rent 2400', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`2017-01-05 * "RiverBank Properties" "Paying the rent" #costflow
   Assets:US:BofA:Checking                       -2400.00 USD
   Expenses:Home:Rent                            +2400.00 USD`)
 })
 test('Transaction #2.2', async () => {
   const data = await costflow.parse('@Verizon | Assets:US:BofA:Checking -59.61 | Expenses:Home:Phone 59.61', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Verizon" "" #costflow
   Assets:US:BofA:Checking                         -59.61 USD
   Expenses:Home:Phone                             +59.61 USD`)
@@ -183,6 +209,7 @@ test('Transaction #2.2', async () => {
 
 test('Transaction #2.3', async () => {
   const data = await costflow.parse('@Verizon | bofa -59.61 | phone 59.61', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Verizon" "" #costflow
   Assets:US:BofA:Checking                         -59.61 USD
   Expenses:Home:Phone                             +59.61 USD`)
@@ -190,6 +217,7 @@ test('Transaction #2.3', async () => {
 
 test('Transaction #2.4', async () => {
   const data = await costflow.parse('Rent | cmb -750 | boc -750 | rent 1500', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Rent" #costflow
   Liabilities:CreditCard:CMB                     -750.00 USD
   Assets:CN:BOC                                  -750.00 USD
@@ -198,6 +226,7 @@ test('Transaction #2.4', async () => {
 
 test('Transaction #2.5', async () => {
   const data = await costflow.parse('Dinner | cmb -180 CNY | rx 60 CNY | ry 60 CNY | food 60 CNY', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Dinner" #costflow
   Liabilities:CreditCard:CMB                     -180.00 CNY
   Assets:Receivables:X                            +60.00 CNY
@@ -207,6 +236,7 @@ test('Transaction #2.5', async () => {
 
 test('Transaction #2.6', async () => {
   const data = await costflow.parse('Transfer to account in US | boc -5000 CNY @ 7.2681 USD  | bofa +726.81', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Transfer to account in US" #costflow
   Assets:CN:BOC                                 -5000.00 CNY @ 7.2681 USD
   Assets:US:BofA:Checking                        +726.81 USD`)
@@ -214,6 +244,7 @@ test('Transaction #2.6', async () => {
 
 test('Transaction #2.7', async () => {
   const data = await costflow.parse('Transfer to account in US | boc -5000 CNY @@ 726.81 USD  | bofa +726.81', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Transfer to account in US" #costflow
   Assets:CN:BOC                                 -5000.00 CNY @@ 726.81 USD
   Assets:US:BofA:Checking                        +726.81 USD`)
@@ -221,6 +252,7 @@ test('Transaction #2.7', async () => {
 
 test('Transaction #2.8', async () => {
   const data = await costflow.parse('Bought shares of Apple | bofa -1915.5 | aapl 10 AAPL {191.55 USD}', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Bought shares of Apple" #costflow
   Assets:US:BofA:Checking                       -1915.50 USD
   Assets:ETrade:AAPL                             +10.00 AAPL {191.55 USD}`)
@@ -228,6 +260,7 @@ test('Transaction #2.8', async () => {
 
 test('Transaction #2.9', async () => {
   const data = await costflow.parse('Sold shares of Apple | aapl -10.00 AAPL {191.55 USD} @ 201.55 USD | cg -100.00 USD | bofa +2015.5', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Sold shares of Apple" #costflow
   Assets:ETrade:AAPL                             -10.00 AAPL {191.55 USD} @ 201.55 USD
   Income:Etrade:CapitalGains                     -100.00 USD
@@ -236,6 +269,7 @@ test('Transaction #2.9', async () => {
 
 test('Transaction #2.10', async () => {
   const data = await costflow.parse('@麦当劳 #food #mc | cmb -180 CNY | food 180 CNY', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "麦当劳" "" #food #mc #costflow
   Liabilities:CreditCard:CMB                     -180.00 CNY
   Expenses:Food                                  +180.00 CNY`)
@@ -247,14 +281,17 @@ test('Transaction #2.10', async () => {
 */
 test('Comment #1', async () => {
   const data = await costflow.parse('; I paid and left the taxi, forgot to take change, it was cold.', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('; I paid and left the taxi, forgot to take change, it was cold.')
 })
 test('Comment #2', async () => {
   const data = await costflow.parse('// to do: cancel Netflix subscription.', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('to do: cancel Netflix subscription.')
 })
 test('Comment #3', async () => {
   const data = await costflow.parse('Hello World', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('Hello World')
 })
 
@@ -264,14 +301,17 @@ test('Comment #3', async () => {
 */
 test('Open #1', async () => {
   const data = await costflow.parse('2017-01-01 open Assets:US:BofA:Checking', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('2017-01-01 open Assets:US:BofA:Checking')
 })
 test('Open #2', async () => {
   const data = await costflow.parse('open Assets:CN:CMB', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} open Assets:CN:CMB`)
 })
 test('Open #3', async () => {
   const data = await costflow.parse('open Assets:CN:CMB CNY', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} open Assets:CN:CMB CNY`)
 })
 
@@ -281,10 +321,12 @@ test('Open #3', async () => {
 */
 test('Close #1', async () => {
   const data = await costflow.parse('2017-01-01 close Assets:US:BofA:Checking', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('2017-01-01 close Assets:US:BofA:Checking')
 })
 test('Open #2', async () => {
   const data = await costflow.parse('close Assets:CN:CMB', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} close Assets:CN:CMB`)
 })
 
@@ -294,10 +336,12 @@ test('Open #2', async () => {
 */
 test('Commodity #1', async () => {
   const data = await costflow.parse('1867-01-01 commodity CAD', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('1867-01-01 commodity CAD')
 })
 test('Commodity #2', async () => {
   const data = await costflow.parse('commodity HOOL', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} commodity HOOL`)
 })
 
@@ -307,14 +351,17 @@ test('Commodity #2', async () => {
 */
 test('Option #1', async () => {
   const data = await costflow.parse('option Example Costflow file', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('option "title" "Example Costflow file"')
 })
 test('Option #2', async () => {
   const data = await costflow.parse('option CNY', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('option "operating_currency" "CNY"')
 })
 test('Option #3', async () => {
   const data = await costflow.parse('option "conversion_currency" "NOTHING"', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('option "conversion_currency" "NOTHING"')
 })
 
@@ -324,10 +371,12 @@ test('Option #3', async () => {
 */
 test('Note #1', async () => {
   const data = await costflow.parse('2017-01-01 note Assets:US:BofA:Checking Called about fraudulent card.', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('2017-01-01 note Assets:US:BofA:Checking "Called about fraudulent card."')
 })
 test('Note #2', async () => {
   const data = await costflow.parse('note bofa Called about fraudulent card.', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} note Assets:US:BofA:Checking "Called about fraudulent card."`)
 })
 
@@ -337,10 +386,12 @@ test('Note #2', async () => {
 */
 test('Balance #1', async () => {
   const data = await costflow.parse('2017-01-01 balance Assets:US:BofA:Checking 360 CNY', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('2017-01-01 balance Assets:US:BofA:Checking 360 CNY')
 })
 test('Balance #2', async () => {
   const data = await costflow.parse('tmr balance bofa 1024', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.add(1, 'd').format('YYYY-MM-DD')} balance Assets:US:BofA:Checking 1024 USD`)
 })
 
@@ -350,6 +401,7 @@ test('Balance #2', async () => {
 */
 test('Pad #1', async () => {
   const data = await costflow.parse('pad bofa eob', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} pad Assets:US:BofA:Checking Equity:Opening-Balances`)
 })
 
@@ -360,16 +412,19 @@ test('Pad #1', async () => {
 */
 test('Price #1', async () => {
   const data = await costflow.parse('2017-01-17 price USD 1.08 CAD', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('2017-01-17 price USD 1.08 CAD')
 })
 test('Price #2', async () => {
   const exchange = await alphavantage.exchange(testConfig.alphavantage, 'USD', 'CNY')
   const data = await costflow.parse('price USD to CNY', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} price USD ${exchange.rate} CNY`)
 })
 test('Price #3', async () => {
   const quote = await alphavantage.quote(testConfig.alphavantage, 'AAPL')
   const data = await costflow.parse('price AAPL', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} price AAPL ${quote.price} USD`)
 })
 
@@ -382,18 +437,21 @@ test('Price #3', async () => {
 test('Snap #1', async () => {
   const exchange = await alphavantage.exchange(testConfig.alphavantage, 'CAD', 'USD')
   const data = await costflow.parse('$ CAD', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`1 CAD = ${exchange.rate} USD`)
 })
 
 test('Snap #2', async () => {
   const exchange = await alphavantage.exchange(testConfig.alphavantage, 'USD', 'CNY')
   const data = await costflow.parse('$ 100 USD to CNY', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`100 USD = ${exchange.rate} CNY`)
 })
 
 test('Snap #3', async () => {
   const quote = await alphavantage.quote(testConfig.alphavantage, 'AAPL')
   const data = await costflow.parse('$ 200 AAPL', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`AAPL ${quote.price} (${quote.percent})\n200 AAPL = ${Number(quote.price * 200).toFixed(2)}`)
 })
 
@@ -403,10 +461,12 @@ test('Snap #3', async () => {
 */
 test('Event #1', async () => {
   const data = await costflow.parse('2017-01-02 event "location" "Paris, France"', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe('2017-01-02 event "location" "Paris, France"')
 })
 test('Event #2', async () => {
   const data = await costflow.parse('event location Paris, Francce', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} event "location" "Paris, Francce"`)
 })
 
@@ -415,12 +475,14 @@ test('Event #2', async () => {
 */
 test('Formula #1', async () => {
   const data = await costflow.parse('f spotify', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Spotify" "" #costflow
   Liabilities:CreditCard:Visa                     -15.98 USD
   Expenses:Subscriptions                          +15.98 USD`)
 })
 test('Formula #2', async () => {
   const data = await costflow.parse('gcp 12.50', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Google" "" #costflow
   Liabilities:CreditCard:Visa                     -12.50 USD
   Expenses:Cloud                                  +12.50 USD`)
@@ -428,6 +490,7 @@ test('Formula #2', async () => {
 
 test('Formula #3', async () => {
   const data = await costflow.parse('f c2f @KFC 36', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "KFC" "" #costflow
   Liabilities:CreditCard:CMB                      -36.00 USD
   Expenses:Food                                   +36.00 USD`)
@@ -435,6 +498,7 @@ test('Formula #3', async () => {
 
 test('Formula #4', async () => {
   const data = await costflow.parse('☕️ 4.2', testConfig)
+  expectToBeNotError(data)
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Leplays" "☕️" #costflow
   Liabilities:CreditCard:Visa                      -4.20 USD
   Expenses:Coffee                                  +4.20 USD`)

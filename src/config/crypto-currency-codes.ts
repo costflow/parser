@@ -1,7 +1,7 @@
 /*
   Crypto currency codes supported by Alpha Vantage https://www.alphavantage.co/documentation/#digital-currency
 */
-var list = [
+export const cryptoList = [
   '1ST',
   '2GIVE',
   '808',
@@ -538,9 +538,6 @@ var list = [
   'ZIL',
   'ZLA',
   'ZRX'
-]
+] as const
 
-module.exports = {
-  cryptoList: list,
-  cryptoReg: new RegExp(list.join('|'), 'g')
-}
+export const cryptoReg = new RegExp(cryptoList.join('|'), 'g')

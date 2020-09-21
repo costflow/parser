@@ -1,13 +1,21 @@
-const axios = require('axios')
-const dayjs = require('dayjs')
+import axios from 'axios'
+import dayjs from 'dayjs'
+import type { cryptoList } from './config/crypto-currency-codes'
+import type { exchangeList } from './config/currency-codes'
 
-var utc = require('dayjs/plugin/utc') // dependent on utc plugin
-var timezone = require('dayjs/plugin/timezone')
-dayjs.extend(utc)
-dayjs.extend(timezone)
+type ArrayElement<ArrayType extends readonly unknown[]> = ArrayType[number]
 
-const exchange = function (key, from, to) {
-  return new Promise(function (resolve, reject) {
+export type AlphaVantageCryptoCurrency = ArrayElement<typeof cryptoList>
+export type AlphaVantageFiatCurrency = ArrayElement<typeof exchangeList>
+export type AlphaVantageCurrency = AlphaVantageCryptoCurrency | AlphaVantageFiatCurrency
+
+export interface IExchangeResponse {
+  rate: number,
+  updatedAt: number,
+}
+
+export const exchange = function (key: string, from: AlphaVantageCurrency, to: AlphaVantageCurrency) {
+  return new Promise<IExchangeResponse>(function (resolve, reject) {
     if (!key) {
       reject(Error('ALPHA_VANTAGE_KEY_NOT_EXIST'))
     } else {
@@ -17,11 +25,10 @@ const exchange = function (key, from, to) {
             reject(Error('ALPHA_VANTAGE_KEY_INVALID_OR_EXCEED_RATE_LIMIT'))
           } else {
             const data = response.data['Realtime Currency Exchange Rate']
-            const result = {
+            resolve({
               rate: Number(data['5. Exchange Rate']),
               updatedAt: dayjs.tz(data['6. Last Refreshed'].replace(' ', 'T'), response.data['7. Time Zone']).valueOf()
-            }
-            resolve(result)
+            })
           }
         }).catch(function (error) {
           reject(error)
@@ -30,8 +37,14 @@ const exchange = function (key, from, to) {
   })
 }
 
-const quote = function (key, symbol) {
-  return new Promise(function (resolve, reject) {
+export interface IQuoteResponse {
+  price: number,
+  change: number,
+  percent: number,
+}
+
+export const quote = function (key: string, symbol: string) {
+  return new Promise<IQuoteResponse>(function (resolve, reject) {
     if (!key) {
       reject(Error('ALPHA_VANTAGE_KEY_NOT_EXIST'))
     } else {
@@ -40,21 +53,15 @@ const quote = function (key, symbol) {
           if (!response.data['Global Quote']) {
             reject(Error('ALPHA_VANTAGE_KEY_INVALID_OR_EXCEED_RATE_LIMIT'))
           } else {
-            const result = {
+            resolve({
               price: Number(response.data['Global Quote']['05. price']),
               change: response.data['Global Quote']['09. change'],
               percent: response.data['Global Quote']['10. change percent']
-            }
-            resolve(result)
+            })
           }
         }).catch(function (error) {
           reject(error)
         })
     }
   })
-}
-
-module.exports = {
-  exchange,
-  quote
 }
