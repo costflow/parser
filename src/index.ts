@@ -50,6 +50,7 @@ export namespace IParseResult {
     amount: number | null;
     tags: string[];
     links: string[];
+    oneliners: string[] | undefined,
     output: string;
   }
   export interface Error {
@@ -224,6 +225,7 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
 
   // beancount
   let output = ''
+  let oneliners: string[] | undefined
   switch (command) {
     case ';': {
       output = `${backup}`
@@ -431,12 +433,10 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
       }
       output += ` "${comment}"`
 
-      if (tags.length) {
-        output += ` #${tags.join(' #')}`
-      }
-      if (links.length) {
-        output += ` ^${links.join(' ^')}`
-      }
+      const tagsString = tags.map((tag) => ` #${tag}`).join('')
+      const linksString = links.map((link) => ` ^${link}`).join('')
+      output += tagsString
+      output += linksString
 
       if (config.insertTime === 'metadata') {
         let timeOrDatetime = now.format('HH:mm:ss')
@@ -487,6 +487,19 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
 
         output += leftPostings.map((posting) => posting.line).join('')
         output += rightPostings.map((posting) => posting.line).join('')
+
+        if(leftParts.length > 1 && rightParts.length > 1) {
+          // Don't set oneliner, too complex for it.
+        } else if (leftParts.length > 1) {
+          // TODO
+        } else if (rightParts.length > 1) {
+          // TODO
+        } else {
+          oneliners = [
+            `${date} note ${leftPostings[0].account} "${rightPostings[0].account} ${rightPostings[0].amount} ${rightPostings[0].commodity} ${command} ${payee} | ${comment}${tagsString}${linksString} *"`
+          ]
+        }
+
       }
 
       // parse transactions has '|'
@@ -513,6 +526,7 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
     amount,
     tags,
     links,
+    oneliners,
     output
   }
   return result

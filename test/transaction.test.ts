@@ -14,6 +14,7 @@ test('Transaction #1.1', async () => {
   expect(data.output).toBe(`2017-01-05 * "RiverBank Properties" "Paying the rent" #costflow
   Assets:US:BofA:Checking                       -2400.00 USD
   Expenses:Home:Rent                            +2400.00 USD`)
+  expect(data.oneliners).toStrictEqual([`2017-01-05 note Assets:US:BofA:Checking "Expenses:Home:Rent 2400 USD * RiverBank Properties | Paying the rent #costflow *"`])
 })
 test('Transaction #1.2', async () => {
   const data = await costflow.parse('@Verizon 59.61 Assets:US:BofA:Checking > Expenses:Home:Phone', testConfig)
@@ -21,6 +22,7 @@ test('Transaction #1.2', async () => {
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Verizon" "" #costflow
   Assets:US:BofA:Checking                         -59.61 USD
   Expenses:Home:Phone                             +59.61 USD`)
+  expect(data.oneliners).toStrictEqual([`2020-09-24 note Assets:US:BofA:Checking "Expenses:Home:Phone 59.61 USD * Verizon |  #costflow *"`])
 })
 
 test('Transaction #1.3', async () => {
@@ -29,6 +31,7 @@ test('Transaction #1.3', async () => {
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Verizon" "" #costflow
   Assets:US:BofA:Checking                         -59.61 USD
   Expenses:Home:Phone                             +59.61 USD`)
+  expect(data.oneliners).toStrictEqual([`2020-09-24 note Assets:US:BofA:Checking "Expenses:Home:Phone 59.61 USD * Verizon |  #costflow *"`])
 })
 
 test('Transaction #1.4', async () => {
@@ -38,6 +41,7 @@ test('Transaction #1.4', async () => {
   Liabilities:CreditCard:CMB                     -750.00 USD
   Assets:CN:BOC                                  -750.00 USD
   Expenses:Home:Rent                            +1500.00 USD`)
+  expect(data.oneliners).toStrictEqual(undefined)
 })
 
 test('Transaction #1.5', async () => {
@@ -48,6 +52,7 @@ test('Transaction #1.5', async () => {
   Assets:Receivables:X                            +60.00 CNY
   Assets:Receivables:Y                            +60.00 CNY
   Expenses:Food                                   +60.00 CNY`)
+  expect(data.oneliners).toStrictEqual(undefined)
 })
 
 test('Transaction #1.6', async () => {
@@ -56,6 +61,7 @@ test('Transaction #1.6', async () => {
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Transfer to account in US" #costflow
   Assets:CN:BOC                                 -5000.00 CNY @ 7.2681 USD
   Assets:US:BofA:Checking                        +726.81 USD`)
+  expect(data.oneliners).toStrictEqual([`2020-09-24 note Assets:CN:BOC "Assets:US:BofA:Checking 726.81 USD * undefined | Transfer to account in US #costflow *"`])
 })
 
 test('Transaction #1.7', async () => {
@@ -64,6 +70,7 @@ test('Transaction #1.7', async () => {
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Transfer to account in US" #costflow
   Assets:CN:BOC                                 -5000.00 CNY @@ 726.81 USD
   Assets:US:BofA:Checking                        +726.81 USD`)
+  expect(data.oneliners).toStrictEqual([`2020-09-24 note Assets:CN:BOC "Assets:US:BofA:Checking 726.81 USD * undefined | Transfer to account in US #costflow *"`])
 })
 
 test('Transaction #1.8', async () => {
@@ -72,6 +79,7 @@ test('Transaction #1.8', async () => {
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Bought shares of Apple" #costflow
   Assets:US:BofA:Checking                       -1915.50 USD
   Assets:ETrade:AAPL                             +10.00 AAPL {191.55 USD}`)
+  expect(data.oneliners).toStrictEqual([`2020-09-24 note Assets:US:BofA:Checking "Assets:ETrade:AAPL 10 AAPL * undefined | Bought shares of Apple #costflow *"`])
 })
 
 test('Transaction #1.9', async () => {
@@ -81,6 +89,7 @@ test('Transaction #1.9', async () => {
   Assets:ETrade:AAPL                             -10.00 AAPL {191.55 USD} @ 201.55 USD
   Income:Etrade:CapitalGains                     -100.00 USD
   Assets:US:BofA:Checking                       +2015.50 USD`)
+  expect(data.oneliners).toStrictEqual(undefined)
 })
 
 test('Transaction #1.10', async () => {
@@ -89,6 +98,7 @@ test('Transaction #1.10', async () => {
   expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "麦当劳" "" #food #mc #costflow
   Liabilities:CreditCard:CMB                     -180.00 CNY
   Expenses:Food                                  +180.00 CNY`)
+  expect(data.oneliners).toStrictEqual([`2020-09-24 note Liabilities:CreditCard:CMB "Expenses:Food 180  CNY  * 麦当劳 |  #food #mc #costflow *"`])
 })
 
 // Use |
