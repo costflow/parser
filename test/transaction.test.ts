@@ -41,7 +41,10 @@ test('Transaction #1.4', async () => {
   Liabilities:CreditCard:CMB                     -750.00 USD
   Assets:CN:BOC                                  -750.00 USD
   Expenses:Home:Rent                            +1500.00 USD`)
-  expect(data.oneliners).toStrictEqual(undefined)
+  expect(data.oneliners).toStrictEqual([
+    `2020-09-24 note Liabilities:CreditCard:CMB "Expenses:Home:Rent 1500 USD * undefined | Rent #costflow *"`,
+    `2020-09-24 note Assets:CN:BOC "Expenses:Home:Rent 1500 USD * undefined | Rent #costflow *"`,
+  ])
 })
 
 test('Transaction #1.5', async () => {
@@ -52,7 +55,11 @@ test('Transaction #1.5', async () => {
   Assets:Receivables:X                            +60.00 CNY
   Assets:Receivables:Y                            +60.00 CNY
   Expenses:Food                                   +60.00 CNY`)
-  expect(data.oneliners).toStrictEqual(undefined)
+  expect(data.oneliners).toStrictEqual([
+    `2020-09-24 note Liabilities:CreditCard:CMB "Assets:Receivables:X 60  CNY  * undefined | Dinner #costflow *"`,
+    `2020-09-24 note Liabilities:CreditCard:CMB "Assets:Receivables:Y 60  CNY  * undefined | Dinner #costflow *"`,
+    `2020-09-24 note Liabilities:CreditCard:CMB "Expenses:Food 60  CNY  * undefined | Dinner #costflow *"`,
+  ])
 })
 
 test('Transaction #1.6', async () => {
@@ -89,7 +96,10 @@ test('Transaction #1.9', async () => {
   Assets:ETrade:AAPL                             -10.00 AAPL {191.55 USD} @ 201.55 USD
   Income:Etrade:CapitalGains                     -100.00 USD
   Assets:US:BofA:Checking                       +2015.50 USD`)
-  expect(data.oneliners).toStrictEqual(undefined)
+  expect(data.oneliners).toStrictEqual([
+    `2020-09-24 note Assets:ETrade:AAPL "Assets:US:BofA:Checking 2015.5  USD  * undefined | Sold shares of Apple #costflow *"`,
+    `2020-09-24 note Income:Etrade:CapitalGains "Assets:US:BofA:Checking 2015.5  USD  * undefined | Sold shares of Apple #costflow *"`,
+  ])
 })
 
 test('Transaction #1.10', async () => {

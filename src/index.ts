@@ -490,9 +490,15 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
 
         if(leftParts.length > 1 && rightParts.length > 1) {
           // Don't set oneliner, too complex for it.
-        } else if (leftParts.length > 1) {
+        } else if (leftPostings.length > 1) {
+          oneliners = leftPostings.map((leftPosting) =>
+            `${date} note ${leftPosting.account} "${rightPostings[0].account} ${rightPostings[0].amount} ${rightPostings[0].commodity} ${command} ${payee} | ${comment}${tagsString}${linksString} *"`
+          )
           // TODO
-        } else if (rightParts.length > 1) {
+        } else if (rightPostings.length > 1) {
+          oneliners = rightPostings.map((rightPosting) =>
+            `${date} note ${leftPostings[0].account} "${rightPosting.account} ${rightPosting.amount} ${leftPostings[0].commodity} ${command} ${payee} | ${comment}${tagsString}${linksString} *"`
+          )
           // TODO
         } else {
           oneliners = [
