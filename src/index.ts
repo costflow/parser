@@ -192,7 +192,7 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
 
   let amounts = input.match(REGEX.AMOUNT)?.map(n => Number(n))
 
-  const doubleQuotes = input.match(REGEX.DOUBLE_QUOTES)
+  const doubleQuotedParts = input.match(REGEX.DOUBLE_QUOTES)
 
   if (command === null && config.formula && config.formula[input.split(' ')[0]]) {
     command = 'f'
@@ -241,7 +241,7 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
     }
     case 'option': {
       const currencyInOption = input.match(currencyReg)
-      if (doubleQuotes) {
+      if (doubleQuotedParts) {
         output = `${command} ${input}`
       } else if (currencyInOption) {
         output = `${command} "operating_currency" "${currencyInOption}"`
@@ -259,7 +259,7 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
         accountInNote = input.match(REGEX.ACCOUNT)![0]
         input = input.slice(accountInNote.length).trim()
       }
-      output = `${date} ${command} ${accountInNote} ${doubleQuotes ? input : '"' + input + '"'}`
+      output = `${date} ${command} ${accountInNote} ${doubleQuotedParts ? input : '"' + input + '"'}`
       break
     }
     case 'balance': {
@@ -354,7 +354,7 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
       break
     }
     case 'event': {
-      if (doubleQuotes) {
+      if (doubleQuotedParts) {
         output = `${date} ${command} ${input}`
       } else {
         const eventParts = input.split(' ')
@@ -374,7 +374,6 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
 
       // Parse the first line of a transaction: flag/payee/narration/tag/link
       const transactionFlag = command
-      let payee
 
       const tmpTransactionArr = input.split(' ')
       tmpTransactionArr.forEach(function (word) {
@@ -398,9 +397,16 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
 
       output = `${date} ${transactionFlag}`
 
-      if (doubleQuotes) {
-        output += ` ${doubleQuotes.join(' ')}`
-        doubleQuotes.forEach(function (quote) {
+      let payee: string | undefined = undefined
+      let comment: string | undefined = undefined
+      if (doubleQuotedParts) {
+        if(doubleQuotedParts.length === 1) {
+          comment = doubleQuotedParts[0]?.slice(1, -1).trim()
+        } else {
+          payee = doubleQuotedParts[0]?.slice(1, -1).trim()
+          comment = doubleQuotedParts[1]?.slice(1, -1).trim()
+        }
+        doubleQuotedParts.forEach(function (quote) {
           input = input.replace(quote, '')
         })
       } else {
@@ -409,18 +415,21 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
         const pipeExec = REGEX.PIPE.exec(input)
 
         const position = Math.min(amoutExec ? amoutExec.index : input.length, pipeExec ? pipeExec.index : input.length)
-        let firstLine = input.slice(0, position)
+        comment = input.slice(0, position).trim()
         input = input.slice(position).trim()
-        const tmpFirstLineArr = firstLine.split(' ')
+        const tmpFirstLineArr = comment.split(' ')
         tmpFirstLineArr.forEach(function (word) {
           if (word[0] === '@') {
-            payee = word.replace('@', '')
-            firstLine = firstLine.replace(word, '')
+            payee = word.replace('@', '').trim()
+            comment = comment?.replace(word, '').trim()
           }
         })
-
-        output += ` ${payee ? '"' + payee + '" ' : ''}"${firstLine.trim()}"`
       }
+
+      if(payee) {
+        output += ` "${payee}"`
+      }
+      output += ` "${comment}"`
 
       if (tags.length) {
         output += ` #${tags.join(' #')}`
@@ -447,19 +456,17 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
         const leftParts = (input.split(REGEX.FLOW)[0]).split(' + ')
         const rightParts = (input.split(REGEX.FLOW)[1] || '').split(' + ')
 
-        let leftAmount = 0
-        let leftCommodity: string
-        leftParts.forEach(function (postingString) {
-          const posting = parsePosting(postingString, config, '-')
-          leftAmount -= posting.amount!
-          leftCommodity = posting.commodity!
-          output += posting.line
+        const leftPostings = leftParts.map((postingString) => parsePosting(postingString, config, '-'))
+        const leftAmount = leftPostings.reduce((res, posting) => res - posting.amount!, 0)
+        const leftCommodity = leftPostings.reduce((commodity, posting) => posting.commodity ?? commodity, config.currency as string)
+        leftPostings.forEach(function (posting) {
           if (typeof posting.amount === 'number') {
             amount = (Math.abs(posting.amount) > (amount ?? 0)) ? Math.abs(posting.amount) : amount
           }
         })
+
         let rightAmount = 0 - leftAmount
-        rightParts.forEach(function (postingString, index) {
+        const rightPostings = rightParts.map((postingString, index) => {  // TODO: don't mutate amount inside map.
           postingString = postingString.trim()
           let commodity = postingString.match(REGEX.COMMODITY)?.[0].trim() ?? leftCommodity
 
@@ -470,12 +477,16 @@ export const parse = async function (input: string, configRaw: Pick<IParseConfig
           } else {
             rightAmount -= Number(amount)
           }
-          const posting = parsePosting(postingString, config, '+', amount, commodity)
-          output += posting.line
+          return parsePosting(postingString, config, '+', amount, commodity)
+        })
+        rightPostings.forEach(function (posting) {
           if (typeof posting.amount === 'number') {
-            amount = Math.abs(posting.amount) > Number(amount) ? String(Math.abs(posting.amount)) : amount
+            amount = Math.abs(posting.amount) > Number(amount) ? Math.abs(posting.amount) : amount
           }
         })
+
+        output += leftPostings.map((posting) => posting.line).join('')
+        output += rightPostings.map((posting) => posting.line).join('')
       }
 
       // parse transactions has '|'

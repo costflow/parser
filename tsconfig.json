@@ -27,6 +27,6 @@
 
     },
     "include": [
-        "src/index.ts"
+        "src/"
     ],
 }
