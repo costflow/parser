@@ -1,5 +1,16 @@
-import * as Sqrl from 'squirrelly'
+import _ from "lodash";
+_.templateSettings.interpolate = /{{([\s\S]+?)}}/g;
 
-Sqrl.autoEscaping(true)
+interface Variables {
+  amount?: number | "";
+  pre?: string;
+}
 
-export default Sqrl
+const render = (input: string, data: Variables) => {
+  const compiled = _.template(input);
+  return compiled(data);
+};
+
+export default {
+  render,
+};
