@@ -6,11 +6,7 @@ interface Variables {
   pre?: string;
 }
 
-const render = (input: string, data: Variables) => {
+export const compileFormula = (input: string, data: Variables) => {
   const compiled = _.template(input);
   return compiled(data);
-};
-
-export default {
-  render,
 };

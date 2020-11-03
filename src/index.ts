@@ -1,623 +1,484 @@
 /*
   Costflow Syntax: https://docs.costflow.io/syntax/
 */
+import _ from "lodash";
+import { currencyList } from "./config/currency-codes";
+import { exchange, quote } from "./alphavantage";
 
-import dayjs from "dayjs";
-import engine from "./template-engine";
-import { currencyList, currencyReg } from "./config/currency-codes";
-import { cryptoList } from "./config/crypto-currency-codes";
 import {
-  quote,
-  exchange,
-  IExchangeResponse,
-  IQuoteResponse,
-  AlphaVantageCurrency,
-} from "./alphavantage";
-
-import utc from "dayjs/plugin/utc"; // dependent on utc plugin
-import timezone from "dayjs/plugin/timezone";
-dayjs.extend(utc);
-dayjs.extend(timezone);
-
-// TODO: Fix variables being numbers and strings interchangeably. JS is forgiving, but also introduces subtle bugs.
-
-// TODO: Fix expecting variables (especially config) to hold values while they may be undefined instead.
-// In TS, operator `!` enforces such expectation, so the goal is to not use it anywhere (currently there are 17 places).
+  isNumber,
+  isDate,
+  serialize,
+  convertToYMD,
+  convertToNumber,
+  nowWithTimezone,
+  isCurrency,
+} from "./utils";
+import { compileFormula } from "./formula";
+import { parseTransaction } from "./transaction";
 
 type ArrayElement<ArrayType extends readonly unknown[]> = ArrayType[number];
 
-export interface IParseConfig {
+export interface UserConfig {
+  // user related
   currency: ArrayElement<typeof currencyList>;
+  timezone?: string;
 
-  indent: number;
-  lineLength: number;
-  mode: "beancount";
-  tag: string | null;
+  // customize
+  flowSymbol?: string;
+  pipeSymbol?: string;
+  accountMap: Record<string, string>;
+  formula: Record<string, string>;
 
+  // for transactions
   insertTime?: "metadata" | null;
-  alphavantage?: string;
-  formula?: Record<string, string>;
+  tag?: string | null;
   link?: string | null;
-  replacement?: Record<string, string>;
-  timezone?: string; // TODO: Exact list of timezones.
+
+  // for beancount and other plain-text output
+  indent?: number;
+  lineLength?: number;
+
+  // exchange API
+  alphavantage?: string;
 }
 
-export type IParseResult = IParseResult.Result | IParseResult.Error;
+export type ParseResult = ParseResult.Result | ParseResult.Error;
 
-export namespace IParseResult {
-  export interface Result {
+export namespace ParseResult {
+  export interface Result extends Record<string, any> {
+    // Basic
+    directive: string;
     date: string;
-    command: string;
-    sync: boolean | "";
+    created_at: string;
+    shortcut?: string;
+    timezone: string;
+    data: any[];
+
+    // Only for transactions
+    completed: boolean | null;
     amount: number | null;
+    payee: string | null;
+    narration: string | null;
     tags: string[];
     links: string[];
-    output: string;
+
+    // Generate string for 'beancount' mode
+    output?: string;
   }
+
   export interface Error {
-    error: string;
+    error:
+      | "INVALID_MODE"
+      | "INVALID_FLOW_SYMBOL"
+      | "INVALID_PIPE_SYMBOL"
+      | "INVALID_TIMEZONE"
+      | "FORMULA_NOT_FOUND"
+      | "FORMULA_LOOP"
+      | "ALPHAVANTAGE_INVALID_KEY"
+      | "ALPHAVANTAGE_EXCEED_RATE_LIMIT";
   }
 }
 
-const REGEX = {
-  CURRENCY: currencyReg,
-  ALL_CURRENCIES: new RegExp(
-    `\\b(${[...currencyList, ...cryptoList].join("|")})\\b`,
-    "g"
-  ),
-  ACCOUNT: new RegExp(
-    "(Assets|Liabilities|Equity|Income|Expenses)(?::[a-zA-Z0-9]+)*",
-    "g"
-  ),
-  YMD: /^(\d{4})-(\d{2})-(\d{2})\s/g,
-  MONTH_NAME: /^(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})\s/g,
-  SHORT_DATE: /^(dby|ytd|yesterday|tmr|tomorrow|dat)/g,
-  COMMAND: /^(\*|!|;|\/\/|f|open|close|pad|\$|balance|price|commodity|note|event|option)/g,
-  AMOUNT: /\b[+-]?(\d*\.)?\d+\b/g,
-  AMOUNT_IN_PART: /^(\d*\.)?\d+/g,
-  AMOUNT_IN_POSTING: /[+-]?(\d*\.)?\d+/g, // TODO: are these three amount's different for a reason?
-  DOUBLE_QUOTES: /".*?"/g,
-  LAST_WORD_IN_BALANCE: /[+-]?(\d*\.)?\d+(?:\s|$)/g,
-  FLOW: /\s>\s/g,
-  COMMODITY: /\s[A-Z]+(?:\s|$)/g,
-  PIPE: /\|/g,
-  AT_PRICE_COST: /@(.*)([A-Z])\b/g,
-  HELD_AT_COST: /{([^}]+)}/g,
+// const PRESERVED_SYMBOLS: string[] = [
+//   "+",
+//   "-",
+//   ">",
+//   "|",
+//   "*",
+//   "!",
+//   "$",
+//   "@",
+//   "/",
+//   ";",
+// ];
+const DIRECTIVES: string[] = [
+  "open",
+  "close",
+  "comment",
+  "commodity",
+  "formula",
+  "option",
+  "event",
+  "note",
+  "price",
+  "snap",
+  "pad",
+  "balance",
+  "transaction",
+  "set", // set accountMaps
+];
+const DIRECTIVE_SHORTCUTS: Record<string, string> = {
+  "//": "comment",
+  ";": "comment",
+  $: "snap",
+  f: "formula",
+  "!": "transaction",
+  "*": "transaction",
+};
+const DATE_SHORTCUTS: Record<string, number> = {
+  dby: -2,
+  ytd: -1,
+  yesterday: -1,
+  tmr: 1,
+  tomorrow: 1,
+  dat: 2,
 };
 
-export const parsePosting = function (
-  postingString: string,
-  config: IParseConfig,
-  defaultSign: "+" | "-" | null,
-  calculatedAmount?: string,
-  calculatedCommodity?: string
-) {
-  postingString = postingString.trim();
-  if (!postingString) return {};
-
-  const atPriceCost = postingString.match(REGEX.AT_PRICE_COST);
-  if (atPriceCost) {
-    postingString = postingString.replace(atPriceCost[0], "");
-  }
-
-  const heldAtCost = postingString.match(REGEX.HELD_AT_COST);
-  if (heldAtCost) {
-    postingString = postingString.replace(heldAtCost[0], "");
-  }
-
-  let commodity: string | undefined;
-  if (calculatedCommodity) {
-    commodity = calculatedCommodity;
-  } else {
-    commodity = postingString.match(REGEX.COMMODITY)?.[0] ?? config.currency;
-  }
-
-  let amount;
-  if (calculatedAmount) {
-    amount = calculatedAmount.toString();
-  } else {
-    amount = postingString.match(REGEX.AMOUNT_IN_POSTING);
-    amount = amount ? amount[0] : null;
-  }
-
-  let account = postingString
-    .replace(commodity, "")
-    .replace(amount!, "")
-    .trim();
-  account =
-    account.indexOf(":") > 0
-      ? account
-      : config.replacement![account] || account;
-  let startPart = "";
-  startPart += Array(config.indent).fill(" ").join("");
-  startPart += `${account}`;
-
-  const endPart = `${defaultSign || (Number(amount) > 0 ? "+" : "")}${Number(
-    amount
-  ).toFixed(2)} ${commodity.trim()}`;
-  let line = `\n${startPart} ${Array(
-    Math.max(config.lineLength - startPart.length - endPart.length - 2, 1)
-  )
-    .fill(" ")
-    .join("")} ${endPart.trim()}`;
-
-  if (heldAtCost) {
-    line += " " + heldAtCost[0];
-  }
-  if (atPriceCost) {
-    line += " " + atPriceCost[0];
-  }
-
-  return {
-    line,
-    account,
-    amount: Number(amount),
-    commodity,
-  };
-};
-
-export const parse = async function (
+const parser = async (
   input: string,
-  configRaw: Pick<IParseConfig, "currency"> & Partial<IParseConfig>
-): Promise<IParseResult> {
-  const backup = input;
-  const config: IParseConfig = Object.assign(
+  config: UserConfig,
+  mode?: "json" | "beancount",
+  _isFromFormula?: boolean | undefined
+): Promise<any> => {
+  /*
+   * 0. Preparation
+   */
+  // todo: invalid flowSymbol check?
+  // todo: invalid pipeSymbol check?
+  // todo: invalid timezone check?
+
+  config = Object.assign(
     {
-      mode: "beancount",
-      tag: "#costflow",
-      indent: 2,
-      lineLength: 80,
+      currency: "USD",
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      flowSymbol: ">",
+      pipeSymbol: "|",
+      accountMap: {},
+      formula: {},
     },
-    configRaw
+    config
   );
+  mode = mode || "json";
 
-  let tags: string[] = [];
-  let links: string[] = [];
-  let amount: number | null = null;
-  let error: string | false = false;
+  let _numbersInInput: number[] = [];
+  let _doubleQuotedIndexInInput: number[] = [];
 
-  // date
-  const now = config.timezone ? dayjs().tz(config.timezone) : dayjs();
-  const today = now.format("YYYY-MM-DD");
-  const ymdReg = input.match(REGEX.YMD);
-  let date = ymdReg?.[0]?.trim() ?? null;
-  input = date ? input.slice(date.length).trim() : input.trim();
+  let _plusSymbolIndex: number[] = [];
+  let _flowSymbolIndex: number[] = [];
+  let _pipeSymbolIndex: number[] = [];
 
-  const monthNameReg = input.match(REGEX.MONTH_NAME);
-  if (monthNameReg?.[0]) {
-    date = dayjs(`${monthNameReg[0]} ${today.substring(0, 4)}`).format(
-      "YYYY-MM-DD"
-    );
-    input = input.slice(monthNameReg[0].length).trim();
-  }
+  const _inputArr = input
+    .trim()
+    .split(" ")
+    .filter((item) => item.length > 0);
 
-  const shortDateReg = input.match(REGEX.SHORT_DATE);
-  if (shortDateReg?.[0]) {
-    const dateStr = shortDateReg[0];
-    let dateNum = 0;
-    switch (dateStr) {
-      case "dby":
-        dateNum = -2;
-        break;
-      case "ytd":
-      case "yesterday":
-        dateNum = -1;
-        break;
-      case "tmr":
-      case "tomorrow":
-        dateNum = 1;
-        break;
-      case "dat":
-        dateNum = 2;
-        break;
+  _inputArr.forEach((item, index) => {
+    if (isNumber(item)) {
+      _numbersInInput.push(convertToNumber(item));
     }
-    date = dayjs(today).add(dateNum, "day").format("YYYY-MM-DD");
-    input = input.slice(dateStr.length).trim();
+    if (item === "+") {
+      _plusSymbolIndex.push(index);
+    }
+    if (item === config.flowSymbol) {
+      _flowSymbolIndex.push(index);
+    }
+
+    if (item === config.pipeSymbol) {
+      _pipeSymbolIndex.push(index);
+    }
+
+    if (item[0] === '"') {
+      _doubleQuotedIndexInInput.push(index);
+    }
+    if (item.length > 1 && item[item.length - 1] === '"') {
+      _doubleQuotedIndexInInput.push(index);
+    }
+  });
+
+  const _now = () => nowWithTimezone(config.timezone);
+
+  // index of _inputArr
+  let _index = 0;
+
+  let _word = (offset?: number): string => {
+    return _inputArr[_index + (offset || 0)];
+  };
+
+  // result
+  const result: any = {
+    created_at: _now().toISOString(),
+    timezone: config.timezone,
+  };
+
+  /*
+   * 1. Parse Date
+   */
+
+  if (typeof DATE_SHORTCUTS[_word().toLowerCase()] === "number") {
+    result.date = _now()
+      .add(DATE_SHORTCUTS[_word().toLowerCase()], "day")
+      .format("YYYY-MM-DD");
+  } else if (isDate(_word())) {
+    result.date = convertToYMD(_word());
+  } else if (isDate(`${_word()} ${_word(1)}`)) {
+    // for date format like Jul 2 or October 30
+    result.date = convertToYMD(`${_word()} ${_word(1)} ${_now().year()}`);
+    _index++;
+  } else {
+    result.date = _now().format("YYYY-MM-DD");
+    _index--;
   }
+  _index++;
 
-  date = date || today;
-  input = input.trim();
+  /*
+   * 2. Parse Directive
+   */
 
-  // commands
-  const commandReg = input.match(REGEX.COMMAND);
-  let command = commandReg?.[0] ?? null;
-  input = command ? input.slice(command.length).trim() : input.trim();
-
-  let amounts = input.match(REGEX.AMOUNT)?.map((n) => Number(n));
-
-  const doubleQuotedParts = input.match(REGEX.DOUBLE_QUOTES);
-
-  if (
-    command === null &&
-    config.formula &&
-    config.formula[input.split(" ")[0]]
-  ) {
-    command = "f";
-  }
-
-  // Formula
-  if (command === "f") {
-    const formulaName = input.split(" ")[0];
-    if (config.formula![formulaName]) {
-      const formulaParseResult = engine.render(config.formula![formulaName], {
-        amount: amounts ? amounts[0] : "",
-        pre: input.slice(formulaName.length).trim(),
-      });
-
-      // formulaParseResult should not be a formula command
-      const commandInFormulaResult =
-        formulaParseResult.match(REGEX.COMMAND)?.[0] ?? null;
-      if (
-        commandInFormulaResult === "f" ||
-        (commandInFormulaResult === null &&
-          config.formula &&
-          config.formula[formulaParseResult.split(" ")[0]])
-      ) {
-        error = "FORMULA_LOOP";
-        return { error };
-      }
-
-      const formulaResult = await parse(formulaParseResult, config);
-      return formulaResult;
+  if (DIRECTIVE_SHORTCUTS[_word()]) {
+    result.directive = DIRECTIVE_SHORTCUTS[_word()];
+    result.shortcut = _word();
+    if (_word() === "*" || _word() === "!") {
+      result.completed = _word() === "*";
+    }
+  } else if (DIRECTIVES.includes(_word())) {
+    result.directive = _word();
+  } else if (config?.formula && config?.formula[_word()]) {
+    result.directive = "formula";
+    _index--;
+  } else {
+    if (_numbersInInput.length) {
+      result.directive = "transaction";
     } else {
-      error = "FORMULA_NOT_FOUND";
-      return { error };
+      result.directive = "comment";
+    }
+    _index--;
+  }
+  _index++;
+
+  /*
+   * 2.1 Parse [formula] directive
+   */
+  if (result.directive === "formula") {
+    if (!config || !config.formula || !config.formula[_word()]) {
+      return Error("FORMULA_NOT_FOUND");
+    }
+    if (_isFromFormula) {
+      return Error("FORMULA_LOOP");
+    }
+
+    const compiled = compileFormula(config.formula[_word()], {
+      pre: _inputArr.slice(_index).join(" "),
+      amount: _numbersInInput.length ? _numbersInInput[0] : "",
+    });
+    if (typeof compiled === "string") {
+      return parser(compiled, config, mode, true);
+    } else {
+      return Error("FORMULA?");
     }
   }
 
-  // beancount
-  let output = "";
-  switch (command) {
-    case ";": {
-      output = `${backup}`;
-      break;
-    }
-    case "//": {
-      output = `${backup.replace("//", "").trim()}`;
-      break;
-    }
-    case "open":
-    case "close":
-    case "commodity": {
-      output = `${date} ${command} ${input}`;
-      break;
-    }
-    case "option": {
-      const currencyInOption = input.match(currencyReg);
-      if (doubleQuotedParts) {
-        output = `${command} ${input}`;
-      } else if (currencyInOption) {
-        output = `${command} "operating_currency" "${currencyInOption}"`;
-      } else {
-        output = `${command} "title" "${input}"`;
-      }
-      break;
-    }
-    case "note": {
-      let accountInNote = input.split(" ")[0];
-      if (config.replacement![accountInNote]) {
-        input = input.slice(accountInNote.length).trim();
-        accountInNote = config.replacement![accountInNote];
-      } else if (input.match(REGEX.ACCOUNT)) {
-        accountInNote = input.match(REGEX.ACCOUNT)![0];
-        input = input.slice(accountInNote.length).trim();
-      }
-      output = `${date} ${command} ${accountInNote} ${
-        doubleQuotedParts ? input : '"' + input + '"'
-      }`;
-      break;
-    }
-    case "balance": {
-      const tmpBalanceArr = input.split(" ");
-      let accountInBalance = tmpBalanceArr[0];
-      const lastWordInBalance = tmpBalanceArr[tmpBalanceArr.length - 1];
-      const isLastWordInBalanceNumber = lastWordInBalance.match(
-        REGEX.LAST_WORD_IN_BALANCE
+  /*
+   * 2.2 Parse [comment/open/close/commodity] directives
+   */
+  if (
+    result.directive === "comment" ||
+    result.directive === "open" ||
+    result.directive === "close" ||
+    result.directive === "commodity"
+  ) {
+    result.data = _inputArr.slice(_index).join(" "); // string
+  }
+
+  /*
+   * 2.3 Parse [option/event/note] directives
+   */
+  if (
+    result.directive === "option" ||
+    result.directive === "event" ||
+    result.directive === "note" ||
+    result.directive === "pad"
+  ) {
+    if (_doubleQuotedIndexInInput.length) {
+      result.data = {};
+
+      const _tmpIndex = _doubleQuotedIndexInInput[0];
+      const key = serialize(
+        _inputArr.slice(_tmpIndex, _doubleQuotedIndexInInput[1]),
+        config.accountMap
       );
-      if (config.replacement![accountInBalance]) {
-        input = input.slice(accountInBalance.length).trim();
-        accountInBalance = config.replacement![accountInBalance];
-      } else if (input.match(REGEX.ACCOUNT)) {
-        accountInBalance = input.match(REGEX.ACCOUNT)![0];
-        input = input.slice(accountInBalance.length).trim();
-      }
-      output = `${date} ${command} ${accountInBalance} ${
-        isLastWordInBalanceNumber ? input + " " + config.currency : input
-      }`;
-      break;
-    }
-    case "pad": {
-      const tmpPadArr = input.split(" ");
-      output = `${date} ${command} `;
-      tmpPadArr.forEach(function (str, index) {
-        output +=
-          (config.replacement![str] || str) +
-          (index === tmpPadArr.length - 1 ? "" : " ");
+      const val = serialize(_inputArr.slice(_index + 2), config.accountMap);
+
+      result.data = Object.assign(result.data, {
+        [key]: val,
       });
-      break;
-    }
-    case "price": {
-      const currencyInPrice = input.match(REGEX.ALL_CURRENCIES) || [];
-      if (amounts) {
-        output = `${date} ${command} ${input}`;
-      } else if (
-        currencyInPrice.length === 2 ||
-        (currencyInPrice.length === 1 && currencyInPrice[0] !== config.currency)
-      ) {
-        let exchangeResult: IExchangeResponse;
-        try {
-          exchangeResult = await exchange(
-            config.alphavantage!,
-            currencyInPrice[0] as AlphaVantageCurrency,
-            (currencyInPrice[1] || config.currency) as AlphaVantageCurrency
-          );
-        } catch (err) {
-          error = err.message;
-          break;
-        }
-
-        if (exchangeResult) {
-          output = `${date} ${command} ${currencyInPrice[0]} ${
-            exchangeResult.rate
-          } ${currencyInPrice[1] || config.currency}`;
-        }
-      } else {
-        let quoteResult: IQuoteResponse;
-        try {
-          quoteResult = await quote(config.alphavantage!, input.trim());
-        } catch (err) {
-          error = err.message;
-          break;
-        }
-
-        if (quoteResult) {
-          output = `${date} ${command} ${input.trim()} ${quoteResult.price} ${
-            config.currency
-          }`;
-        }
-      }
-      break;
-    }
-    case "$": {
-      const currencyInSnap = input.match(REGEX.ALL_CURRENCIES) || [];
-      let amountInSnap = 1;
-      if (amounts) {
-        amountInSnap = Number(amounts[0]);
-      }
-      if (
-        currencyInSnap.length === 2 ||
-        (currencyInSnap.length === 1 && currencyInSnap[0] !== config.currency)
-      ) {
-        let exchangeResult: IExchangeResponse;
-        try {
-          exchangeResult = await exchange(
-            config.alphavantage!,
-            currencyInSnap[0] as AlphaVantageCurrency,
-            (currencyInSnap[1] || config.currency) as AlphaVantageCurrency
-          );
-        } catch (err) {
-          error = err.message;
-          break;
-        }
-
-        if (exchangeResult) {
-          output = `${amountInSnap} ${currencyInSnap[0]} = ${Number(
-            exchangeResult.rate * amountInSnap
-          ).toFixed(2)} ${currencyInSnap[1] || config.currency}`;
-        }
-      } else {
-        const symbolInSnap = input.replace(String(amountInSnap), "").trim();
-        let quoteResult: IQuoteResponse;
-        try {
-          quoteResult = await quote(config.alphavantage!, symbolInSnap);
-        } catch (err) {
-          error = err.message;
-          break;
-        }
-
-        if (quoteResult) {
-          output = `${symbolInSnap} ${quoteResult.price} (${quoteResult.percent})`;
-          if (amountInSnap > 1) {
-            output += `\n${amountInSnap} ${symbolInSnap} = ${Number(
-              quoteResult.price * amountInSnap
-            ).toFixed(2)}`;
-          }
-        }
-      }
-      break;
-    }
-    case "event": {
-      if (doubleQuotedParts) {
-        output = `${date} ${command} ${input}`;
-      } else {
-        const eventParts = input.split(" ");
-        output = `${date} ${command} "${eventParts.splice(
-          0,
-          1
-        )}" "${eventParts.join(" ")}"`;
-      }
-      break;
-    }
-    default: {
-      // Transactions
-      // Save as comment if message has no command and no amount
-      if (!amounts) {
-        command = "//";
-        output = backup;
-        break;
-      }
-      command = command || "*";
-
-      // Parse the first line of a transaction: flag/payee/narration/tag/link
-      const transactionFlag = command;
-
-      const tmpTransactionArr = input.split(" ");
-      tmpTransactionArr.forEach(function (word) {
-        if (word[0] === "#") {
-          tags.push(word.replace("#", ""));
-          input = input.replace(word, "");
-        } else if (word[0] === "^") {
-          links.push(word.replace("^", ""));
-          input = input.replace(word, "");
-        }
-      });
-      if (config.tag) {
-        const configTags = config.tag
-          .split(" ")
-          .map((tag) => tag.replace("#", ""));
-        tags = tags.concat(configTags);
-      }
-
-      if (config.link) {
-        const configLinks = config.link
-          .split(" ")
-          .map((tag) => tag.replace("^", ""));
-        links = links.concat(configLinks);
-      }
-
-      output = `${date} ${transactionFlag}`;
-
-      let payee: string | undefined = undefined;
-      let comment: string | undefined = undefined;
-      if (doubleQuotedParts) {
-        if (doubleQuotedParts.length === 1) {
-          comment = doubleQuotedParts[0]?.slice(1, -1).trim();
-        } else {
-          payee = doubleQuotedParts[0]?.slice(1, -1).trim();
-          comment = doubleQuotedParts[1]?.slice(1, -1).trim();
-        }
-        doubleQuotedParts.forEach(function (quote) {
-          input = input.replace(quote, "");
-        });
-      } else {
-        // find text before amount or |
-        const amoutExec = REGEX.AMOUNT.exec(input);
-        const pipeExec = REGEX.PIPE.exec(input);
-
-        const position = Math.min(
-          amoutExec ? amoutExec.index : input.length,
-          pipeExec ? pipeExec.index : input.length
-        );
-        comment = input.slice(0, position).trim();
-        input = input.slice(position).trim();
-        const tmpFirstLineArr = comment.split(" ");
-        tmpFirstLineArr.forEach(function (word) {
-          if (word[0] === "@") {
-            payee = word.replace("@", "").trim();
-            comment = comment?.replace(word, "").trim();
-          }
-        });
-      }
-
-      if (payee) {
-        output += ` "${payee}"`;
-      }
-      output += ` "${comment}"`;
-
-      if (tags.length) {
-        output += ` #${tags.join(" #")}`;
-      }
-      if (links.length) {
-        output += ` ^${links.join(" ^")}`;
-      }
-
-      if (config.insertTime === "metadata") {
-        let timeOrDatetime = now.format("HH:mm:ss");
-        if (dayjs().format("YYYY-MM-DD") !== date) {
-          timeOrDatetime = now.format("YYYY-MM-DD HH:mm:ss");
-        }
-        output += "\n";
-        output += Array(config.indent).fill(" ").join("");
-        output += `time: "${timeOrDatetime}"`;
-      }
-
-      // Parse accounts and amounts
-      // parse transactions has '>'
-      const flowSign = input.match(REGEX.FLOW);
-
-      if (flowSign) {
-        const leftParts = input.split(REGEX.FLOW)[0].split(" + ");
-        const rightParts = (input.split(REGEX.FLOW)[1] || "").split(" + ");
-
-        const leftPostings = leftParts.map((postingString) =>
-          parsePosting(postingString, config, "-")
-        );
-        const leftAmount = leftPostings.reduce(
-          (res, posting) => res - posting.amount!,
-          0
-        );
-        const leftCommodity = leftPostings.reduce(
-          (commodity, posting) => posting.commodity ?? commodity,
-          config.currency as string
-        );
-        leftPostings.forEach(function (posting) {
-          if (typeof posting.amount === "number") {
-            amount =
-              Math.abs(posting.amount) > (amount ?? 0)
-                ? Math.abs(posting.amount)
-                : amount;
-          }
-        });
-
-        let rightAmount = 0 - leftAmount;
-        const rightPostings = rightParts.map((postingString, index) => {
-          // TODO: don't mutate amount inside map.
-          postingString = postingString.trim();
-          let commodity =
-            postingString.match(REGEX.COMMODITY)?.[0].trim() ?? leftCommodity;
-
-          let amount = postingString.match(REGEX.AMOUNT_IN_PART)?.[0] ?? null;
-          if (!amount) {
-            amount = (rightAmount / (rightParts.length - index)).toFixed(2);
-            rightAmount -= Number(amount);
-          } else {
-            rightAmount -= Number(amount);
-          }
-          return parsePosting(postingString, config, "+", amount, commodity);
-        });
-        rightPostings.forEach(function (posting) {
-          if (typeof posting.amount === "number") {
-            amount =
-              Math.abs(posting.amount) > Number(amount)
-                ? Math.abs(posting.amount)
-                : amount;
-          }
-        });
-
-        output += leftPostings.map((posting) => posting.line).join("");
-        output += rightPostings.map((posting) => posting.line).join("");
-      }
-
-      // parse transactions has '|'
-      const pipeSign = input.match(REGEX.PIPE);
-
-      if (pipeSign) {
-        const pipeParts = input.split(REGEX.PIPE);
-        pipeParts.forEach(function (postingString) {
-          if (!postingString.trim()) return;
-          const posting = parsePosting(postingString, config, null);
-          output += posting.line;
-          if (typeof posting.amount === "number") {
-            amount =
-              Math.abs(posting.amount) > (amount ?? 0)
-                ? Math.abs(posting.amount)
-                : amount;
-          }
-        });
-      }
-      break;
+    } else {
+      const key = serialize([_word()], config.accountMap);
+      const val = serialize(_inputArr.slice(_index + 1), config.accountMap);
+      result.data = {
+        [key]: val, // Record<string, string>
+      };
     }
   }
-  const result: IParseResult = error
-    ? { error }
-    : {
-        date,
-        command,
-        sync: command && command !== "//" && command !== "$",
+
+  /*
+   * 2.4 Parse [snap, price] directives
+   */
+
+  if (result.directive === "snap" || result.directive === "price") {
+    const _data: any = {};
+    if (_numbersInInput.length) {
+      if (result.directive === "price") {
+        _data.rate = _numbersInInput[_numbersInInput.length - 1];
+      } else {
+        _data.amount = _numbersInInput[_numbersInInput.length - 1];
+        _index++;
+      }
+    }
+    const _currencies = _inputArr.filter((word) => isCurrency(word));
+    if (!_currencies.length) {
+      // quote
+      const remote = await quote(config?.alphavantage, _word());
+      _data.rate = remote.price;
+      _data.from = _word().toUpperCase();
+      _data.to = "USD"; // Only stocks listed on US markets are supported at the moment
+      _data.api = true;
+      _data.change = remote.change;
+      _data.percent = remote.percent;
+    } else {
+      _data.from = _currencies[0];
+      _data.to = _currencies[1] || config.currency;
+    }
+
+    if (typeof _data.rate === "undefined") {
+      // fetch from AlphaVantage API
+      const remote = await exchange(config?.alphavantage, _data.from, _data.to);
+      _data.rate = remote.rate;
+      _data.api = true;
+    }
+
+    result.data = _data;
+  }
+
+  /*
+   * 2.5 Parse [balance] directive
+   */
+  if (result.directive === "balance") {
+    const { account, amount, currency } = parseTransaction(
+      _inputArr.slice(_index),
+      config.accountMap
+    );
+    result.data = [
+      {
+        account,
         amount,
-        tags,
-        links,
-        output,
-      };
+        currency: currency || config.currency,
+      },
+    ]; // AccountAmountCurrency[]
+  }
+
+  /*
+   * 2.6 Parse [transaction] directive
+   */
+
+  if (result.directive === "transaction") {
+    if (_flowSymbolIndex.length > 0 && _pipeSymbolIndex.length > 0) {
+      return Error("TRANSACTION_SYMBOL_MIXED");
+    } else if (_flowSymbolIndex.length > 1) {
+      return Error("TRANSACTION_FLOW_SYMBOL_ERROR");
+    }
+
+    result.data = [];
+    result.tags = config.tag
+      ? config.tag.split(" ").map((word) => word.replace(/#/g, ""))
+      : [];
+    result.links = config.link
+      ? config.link.split(" ").map((word) => word.replace(/\^/g, ""))
+      : [];
+
+    if (_flowSymbolIndex.length > 0) {
+      const data: any = [];
+      const _flowSliceIndex = _.sortBy(
+        _.uniq(_flowSymbolIndex.concat([_index]).concat(_plusSymbolIndex))
+      );
+
+      let _leftAmount = 0;
+      let _rightAmount = 0;
+      const _flowIndex = _flowSymbolIndex[0];
+
+      for (let f = 0; f < _flowSliceIndex.length; f++) {
+        const parseResult = parseTransaction(
+          _inputArr.slice(_flowSliceIndex[f], _flowSliceIndex[f + 1]),
+          config.accountMap,
+          config.flowSymbol
+        );
+        const {
+          account,
+          currency,
+          narration,
+          payee,
+          tags,
+          links,
+        } = parseResult;
+        let { amount } = parseResult;
+
+        if (_flowSliceIndex[f] < _flowIndex) {
+          amount = amount && amount > 0 ? 0 - amount : amount;
+          _leftAmount += amount || 0;
+        } else {
+          if (amount) {
+            _rightAmount += amount;
+          } else {
+            amount =
+              (_rightAmount - _leftAmount) / (_flowSliceIndex.length - f);
+            _rightAmount -= amount;
+          }
+        }
+        data.push({
+          account,
+          amount,
+          currency: currency || config.currency,
+        });
+        result.data = data; // AccountAmountCurrency[]
+        result.payee = result.payee || payee;
+        result.narration = result.narration || narration;
+        result.tags = result.tags.concat(tags);
+        result.links = result.links.concat(links);
+      }
+    }
+
+    if (_pipeSymbolIndex.length > 0) {
+      const data: any = [];
+      const _pipeSliceIndex = _.sortBy(
+        _.uniq(_pipeSymbolIndex.concat([_index]))
+      );
+
+      for (let f = 0; f < _pipeSliceIndex.length; f++) {
+        const parseResult = parseTransaction(
+          _inputArr.slice(_pipeSliceIndex[f], _pipeSliceIndex[f + 1]),
+          config.accountMap,
+          config.pipeSymbol
+        );
+        const {
+          account,
+          currency,
+          narration,
+          payee,
+          tags,
+          links,
+        } = parseResult;
+        let { amount } = parseResult;
+
+        data.push({
+          account,
+          amount,
+          currency: currency || config.currency,
+        });
+        result.data = data; // AccountAmountCurrency[]
+        result.payee = result.payee || payee;
+        result.narration = result.narration || narration;
+        result.tags = result.tags.concat(tags);
+        result.links = result.links.concat(links);
+      }
+    }
+  }
+
+  /*
+   * Generate string output for Beancount
+   */
+
+  /*
+   * Return
+   */
   return result;
 };

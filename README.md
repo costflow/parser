@@ -5,9 +5,11 @@ Costflow Parser is a library for parsing plain text to Beancount/Ledger/hledger 
 [Costflow Syntax](https://github.com/costflow/syntax) Version: v0.3
 
 ## Docs
+
 [https://docs.costflow.io/parser/](https://docs.costflow.io/parser/)
 
 ## Features
+
 - Date is optional, the default value is ‘today’ in your timezone.
 - Currency/Commodity code is optional.
 - Account name replacements. E.g. bofa in your message will be replaced with Assets:US:BofA:Checking.
@@ -19,6 +21,7 @@ Costflow Parser is a library for parsing plain text to Beancount/Ledger/hledger 
 Playground: [https://playground.costflow.io](https://playground.costflow.io)
 
 # Roadmap
+
 [https://github.com/orgs/costflow/projects](https://github.com/orgs/costflow/projects)
 
 Check out [Costflow Syntax](https://github.com/costflow/syntax) for more information.

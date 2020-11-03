@@ -17,7 +17,7 @@ export interface IExchangeResponse {
 }
 
 export const exchange = function (
-  key: string,
+  key: string | undefined,
   from: AlphaVantageCurrency,
   to: AlphaVantageCurrency
 ) {
@@ -58,7 +58,7 @@ export interface IQuoteResponse {
   percent: number;
 }
 
-export const quote = function (key: string, symbol: string) {
+export const quote = function (key: string | undefined, symbol: string) {
   return new Promise<IQuoteResponse>(function (resolve, reject) {
     if (!key) {
       reject(Error("ALPHA_VANTAGE_KEY_NOT_EXIST"));
@@ -73,7 +73,7 @@ export const quote = function (key: string, symbol: string) {
           } else {
             resolve({
               price: Number(response.data["Global Quote"]["05. price"]),
-              change: response.data["Global Quote"]["09. change"],
+              change: Number(response.data["Global Quote"]["09. change"]),
               percent: response.data["Global Quote"]["10. change percent"],
             });
           }
