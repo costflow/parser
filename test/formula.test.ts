@@ -1,37 +1,95 @@
-import * as costflow from '..'
-import { expectToBeNotError, testConfig, today } from './common'
-
+import costflow from "..";
+import { expectToBeNotError, testConfig, today } from "./common";
 
 /*
   Part 13: Formula
 */
-test('Formula #1', async () => {
-  const data = await costflow.parse('f spotify', testConfig)
-  expectToBeNotError(data)
-  expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Spotify" "" #costflow
-  Liabilities:CreditCard:Visa                     -15.98 USD
-  Expenses:Subscriptions                          +15.98 USD`)
-})
-test('Formula #2', async () => {
-  const data = await costflow.parse('gcp 12.50', testConfig)
-  expectToBeNotError(data)
-  expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Google" "" #costflow
-  Liabilities:CreditCard:Visa                     -12.50 USD
-  Expenses:Cloud                                  +12.50 USD`)
-})
+test("Formula #1", async () => {
+  const res = await costflow.parse("f spotify", testConfig);
+  expectToBeNotError(res);
 
-test('Formula #3', async () => {
-  const data = await costflow.parse('f c2f @KFC 36', testConfig)
-  expectToBeNotError(data)
-  expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "KFC" "" #costflow
-  Liabilities:CreditCard:CMB                      -36.00 USD
-  Expenses:Food                                   +36.00 USD`)
-})
+  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  expect(res.completed).toBe(true);
+  expect(res.payee).toBe("Spotify");
+  expect(res.narration).toBe("");
+  expect(res.tags).toEqual(["costflow", "music"]);
+  expect(res.data).toEqual([
+    {
+      account: "Liabilities:Visa",
+      amount: -15.98,
+      currency: "USD",
+    },
+    {
+      account: "Expenses:Music",
+      amount: 15.98,
+      currency: "USD",
+    },
+  ]);
+});
+test("Formula #2", async () => {
+  const res = await costflow.parse("btv #transfer 12.50", testConfig);
+  expectToBeNotError(res);
 
-test('Formula #4', async () => {
-  const data = await costflow.parse('☕️ 4.2', testConfig)
-  expectToBeNotError(data)
-  expect(data.output).toBe(`${today.format('YYYY-MM-DD')} * "Leplays" "☕️" #costflow
-  Liabilities:CreditCard:Visa                      -4.20 USD
-  Expenses:Coffee                                  +4.20 USD`)
-})
+  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  expect(res.completed).toBe(true);
+  expect(res.payee).toBe(null);
+  expect(res.narration).toBe("");
+  expect(res.tags).toEqual(["costflow", "transfer"]);
+  expect(res.data).toEqual([
+    {
+      account: "Assets:BofA",
+      amount: -12.5,
+      currency: "USD",
+    },
+    {
+      account: "Liabilities:Visa",
+      amount: +12.5,
+      currency: "USD",
+    },
+  ]);
+});
+
+test("Formula #3", async () => {
+  const res = await costflow.parse("f uber 8.8", testConfig);
+  expectToBeNotError(res);
+  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  expect(res.completed).toBe(true);
+  expect(res.payee).toBe("Uber");
+  expect(res.narration).toBe("");
+  expect(res.tags).toEqual(["costflow", "uber"]);
+  expect(res.data).toEqual([
+    {
+      account: "Liabilities:Visa",
+      amount: -8.8,
+      currency: "USD",
+    },
+    {
+      account: "Expenses:Transport",
+      amount: +8.8,
+      currency: "USD",
+    },
+  ]);
+});
+
+test("Formula #4", async () => {
+  const res = await costflow.parse("☕️ 4.2", testConfig);
+  expectToBeNotError(res);
+
+  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  expect(res.completed).toBe(true);
+  expect(res.payee).toBe("Leplay's");
+  expect(res.narration).toBe("☕️");
+  expect(res.tags).toEqual(["costflow"]);
+  expect(res.data).toEqual([
+    {
+      account: "Liabilities:Visa",
+      amount: -4.2,
+      currency: "USD",
+    },
+    {
+      account: "Expenses:Coffee",
+      amount: +4.2,
+      currency: "USD",
+    },
+  ]);
+});

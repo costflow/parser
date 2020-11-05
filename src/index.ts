@@ -2,9 +2,6 @@
   Costflow Syntax: https://docs.costflow.io/syntax/
 */
 import _ from "lodash";
-import { currencyList } from "./config/currency-codes";
-import { exchange, quote } from "./alphavantage";
-
 import {
   isNumber,
   isDate,
@@ -16,121 +13,16 @@ import {
 } from "./utils";
 import { compileFormula } from "./formula";
 import { parseTransaction } from "./transaction";
-
-type ArrayElement<ArrayType extends readonly unknown[]> = ArrayType[number];
-
-export interface UserConfig {
-  // user related
-  currency: ArrayElement<typeof currencyList>;
-  timezone?: string;
-
-  // customize
-  flowSymbol?: string;
-  pipeSymbol?: string;
-  accountMap: Record<string, string>;
-  formula: Record<string, string>;
-
-  // for transactions
-  insertTime?: "metadata" | null;
-  tag?: string | null;
-  link?: string | null;
-
-  // for beancount and other plain-text output
-  indent?: number;
-  lineLength?: number;
-
-  // exchange API
-  alphavantage?: string;
-}
-
-export type ParseResult = ParseResult.Result | ParseResult.Error;
-
-export namespace ParseResult {
-  export interface Result extends Record<string, any> {
-    // Basic
-    directive: string;
-    date: string;
-    created_at: string;
-    shortcut?: string;
-    timezone: string;
-    data: any[];
-
-    // Only for transactions
-    completed: boolean | null;
-    amount: number | null;
-    payee: string | null;
-    narration: string | null;
-    tags: string[];
-    links: string[];
-
-    // Generate string for 'beancount' mode
-    output?: string;
-  }
-
-  export interface Error {
-    error:
-      | "INVALID_MODE"
-      | "INVALID_FLOW_SYMBOL"
-      | "INVALID_PIPE_SYMBOL"
-      | "INVALID_TIMEZONE"
-      | "FORMULA_NOT_FOUND"
-      | "FORMULA_LOOP"
-      | "ALPHAVANTAGE_INVALID_KEY"
-      | "ALPHAVANTAGE_EXCEED_RATE_LIMIT";
-  }
-}
-
-// const PRESERVED_SYMBOLS: string[] = [
-//   "+",
-//   "-",
-//   ">",
-//   "|",
-//   "*",
-//   "!",
-//   "$",
-//   "@",
-//   "/",
-//   ";",
-// ];
-const DIRECTIVES: string[] = [
-  "open",
-  "close",
-  "comment",
-  "commodity",
-  "formula",
-  "option",
-  "event",
-  "note",
-  "price",
-  "snap",
-  "pad",
-  "balance",
-  "transaction",
-  "set", // set accountMaps
-];
-const DIRECTIVE_SHORTCUTS: Record<string, string> = {
-  "//": "comment",
-  ";": "comment",
-  $: "snap",
-  f: "formula",
-  "!": "transaction",
-  "*": "transaction",
-};
-const DATE_SHORTCUTS: Record<string, number> = {
-  dby: -2,
-  ytd: -1,
-  yesterday: -1,
-  tmr: 1,
-  tomorrow: 1,
-  dat: 2,
-};
+import { exchange, quote } from "./alphavantage";
+import { DIRECTIVES, DIRECTIVE_SHORTCUTS, DATE_SHORTCUTS } from "./config";
+import { UserConfig, ParseResult } from "./interface";
 
 const parser = async (
   input: string,
   config: UserConfig,
   mode?: "json" | "beancount",
   _isFromFormula?: boolean | undefined
-): Promise<any> => {
+): Promise<ParseResult> => {
   /*
    * 0. Preparation
    */
@@ -149,7 +41,7 @@ const parser = async (
     },
     config
   );
-  mode = mode || "json";
+  mode = mode || config.mode || "json";
 
   let _numbersInInput: number[] = [];
   let _doubleQuotedIndexInInput: number[] = [];
@@ -213,7 +105,7 @@ const parser = async (
     result.date = convertToYMD(_word());
   } else if (isDate(`${_word()} ${_word(1)}`)) {
     // for date format like Jul 2 or October 30
-    result.date = convertToYMD(`${_word()} ${_word(1)} ${_now().year()}`);
+    result.date = convertToYMD(`${_word()} ${_word(1)}, ${_now().year()}`);
     _index++;
   } else {
     result.date = _now().format("YYYY-MM-DD");
@@ -251,20 +143,20 @@ const parser = async (
    */
   if (result.directive === "formula") {
     if (!config || !config.formula || !config.formula[_word()]) {
-      return Error("FORMULA_NOT_FOUND");
+      return { error: "FORMULA_NOT_FOUND" };
     }
     if (_isFromFormula) {
-      return Error("FORMULA_LOOP");
+      return { error: "FORMULA_LOOP" };
     }
 
     const compiled = compileFormula(config.formula[_word()], {
-      pre: _inputArr.slice(_index).join(" "),
+      pre: _inputArr.slice(_index + 1).join(" "),
       amount: _numbersInInput.length ? _numbersInInput[0] : "",
     });
     if (typeof compiled === "string") {
       return parser(compiled, config, mode, true);
     } else {
-      return Error("FORMULA?");
+      return { error: "FORMULA_COMPILE_ERROR" };
     }
   }
 
@@ -290,14 +182,22 @@ const parser = async (
     result.directive === "pad"
   ) {
     if (_doubleQuotedIndexInInput.length) {
+      if (_doubleQuotedIndexInInput.length !== 4) {
+        return { error: "DOUBLE_QUOTES_SHOULD_BE_FOUR" };
+      }
       result.data = {};
 
-      const _tmpIndex = _doubleQuotedIndexInInput[0];
       const key = serialize(
-        _inputArr.slice(_tmpIndex, _doubleQuotedIndexInInput[1]),
+        _inputArr.slice(
+          _doubleQuotedIndexInInput[0],
+          _doubleQuotedIndexInInput[1] + 1
+        ),
         config.accountMap
       );
-      const val = serialize(_inputArr.slice(_index + 2), config.accountMap);
+      const val = serialize(
+        _inputArr.slice(_doubleQuotedIndexInInput[2]),
+        config.accountMap
+      );
 
       result.data = Object.assign(result.data, {
         [key]: val,
@@ -373,12 +273,15 @@ const parser = async (
 
   if (result.directive === "transaction") {
     if (_flowSymbolIndex.length > 0 && _pipeSymbolIndex.length > 0) {
-      return Error("TRANSACTION_SYMBOL_MIXED");
+      return { error: "TRANSACTION_SYMBOL_MIXED" };
     } else if (_flowSymbolIndex.length > 1) {
-      return Error("TRANSACTION_FLOW_SYMBOL_ERROR");
+      return { error: "TRANSACTION_FLOW_SYMBOL_TOO_MANY" };
     }
 
     result.data = [];
+    result.completed =
+      typeof result.completed === "boolean" ? result.completed : true;
+
     result.tags = config.tag
       ? config.tag.split(" ").map((word) => word.replace(/#/g, ""))
       : [];
@@ -394,6 +297,7 @@ const parser = async (
 
       let _leftAmount = 0;
       let _rightAmount = 0;
+      let _leftCurrency;
       const _flowIndex = _flowSymbolIndex[0];
 
       for (let f = 0; f < _flowSliceIndex.length; f++) {
@@ -402,26 +306,23 @@ const parser = async (
           config.accountMap,
           config.flowSymbol
         );
-        const {
-          account,
-          currency,
-          narration,
-          payee,
-          tags,
-          links,
-        } = parseResult;
-        let { amount } = parseResult;
+        const { account, narration, payee, tags, links } = parseResult;
+        let { amount, currency } = parseResult;
 
         if (_flowSliceIndex[f] < _flowIndex) {
           amount = amount && amount > 0 ? 0 - amount : amount;
           _leftAmount += amount || 0;
+          _leftCurrency = currency;
         } else {
           if (amount) {
             _rightAmount += amount;
           } else {
             amount =
               (_rightAmount - _leftAmount) / (_flowSliceIndex.length - f);
-            _rightAmount -= amount;
+            _rightAmount -= amount; // Math.toFixed
+          }
+          if (!currency) {
+            currency = _leftCurrency || config.currency;
           }
         }
         data.push({
@@ -467,8 +368,8 @@ const parser = async (
         result.data = data; // AccountAmountCurrency[]
         result.payee = result.payee || payee;
         result.narration = result.narration || narration;
-        result.tags = result.tags.concat(tags);
-        result.links = result.links.concat(links);
+        result.tags = _.uniq(result.tags.concat(tags));
+        result.links = _.uniq(result.links.concat(links));
       }
     }
   }
@@ -481,4 +382,8 @@ const parser = async (
    * Return
    */
   return result;
+};
+
+export default {
+  parse: parser,
 };

@@ -23,7 +23,12 @@ export const parseTransaction = (
     tags: [],
     links: [],
   };
+  let doubleQuotesCount = 0;
+
   arr = arr.filter((item) => {
+    if (item.indexOf('"') >= 0) {
+      doubleQuotesCount++;
+    }
     if (isNumber(item)) {
       result.amount = convertToNumber(item);
       return false;
@@ -37,7 +42,7 @@ export const parseTransaction = (
       return false;
     }
     if (isCurrency(item)) {
-      result.currency = item.toUpperCase();
+      result.currency = item;
       return false;
     }
     if (item.startsWith("@")) {
@@ -55,7 +60,16 @@ export const parseTransaction = (
     if (item === symbolToRemove) return false;
     return true;
   });
-  result.narration = arr.join(" ");
+
+  const strLeft = arr.join(" ");
+  if (doubleQuotesCount === 4) {
+    let tmp = strLeft.split('"');
+    tmp = tmp.filter((str) => str.length && str.trim().length);
+    result.payee = tmp[0];
+    result.narration = tmp[1];
+  } else {
+    result.narration = strLeft;
+  }
 
   result = Object.assign(
     {

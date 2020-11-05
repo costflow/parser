@@ -37,6 +37,9 @@ export const isCurrency = (str: string): boolean => {
 /*
  * Date
  */
+// Note: one regex bug https://stackoverflow.com/questions/3891641/regex-test-only-works-every-other-time
+const ymdReg = /^(\d{4})-(\d{2})-(\d{2})$/;
+const nameReg = /^(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})(?:,\s?\d{4})?$/;
 
 export const nowWithTimezone = (timezone: string | undefined) =>
   timezone ? dayjs().tz(timezone) : dayjs();
@@ -44,9 +47,6 @@ export const nowWithTimezone = (timezone: string | undefined) =>
 export const isDate = (str: string): boolean => {
   // Supported formats: 2020-11-01 / Jul 2 / October 30 (case insensitive)
   // some bad cases: Jul 33 / October 99 will be recognized as year 2033 or 1999
-  const ymdReg = /^(\d{4})-(\d{2})-(\d{2})\s/g;
-  const nameReg = /^(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})\s/g;
-
   return (
     (ymdReg.test(str) || nameReg.test(str)) &&
     new Date(str).toString() !== "Invalid Date"
@@ -54,8 +54,11 @@ export const isDate = (str: string): boolean => {
 };
 
 export const convertToYMD = (str: string): string | null => {
-  if (!isDate(str)) return null;
-  return dayjs(new Date(str)).format("YYYY-MM-DD");
+  if (!isDate(str)) {
+    return null;
+  }
+
+  return ymdReg.test(str) ? str : dayjs(new Date(str)).format("YYYY-MM-DD");
 };
 
 /*
@@ -66,6 +69,6 @@ export const serialize = (
   accountMap: Record<string, string>
 ): string => {
   if (!arr.length) return "";
-  arr.map((item) => accountMap[item] || item);
+  arr = arr.map((item) => accountMap[item] || item);
   return arr.join(" ").replace(/\"/g, "");
 };
