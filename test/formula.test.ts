@@ -8,6 +8,7 @@ test("Formula #1", async () => {
   const res = await costflow.parse("f spotify", testConfig);
   expectToBeNotError(res);
 
+  expect(res.directive).toBe("transaction");
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("Spotify");
@@ -30,6 +31,7 @@ test("Formula #2", async () => {
   const res = await costflow.parse("btv #transfer 12.50", testConfig);
   expectToBeNotError(res);
 
+  expect(res.directive).toBe("transaction");
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe(null);
@@ -52,6 +54,7 @@ test("Formula #2", async () => {
 test("Formula #3", async () => {
   const res = await costflow.parse("f uber 8.8", testConfig);
   expectToBeNotError(res);
+  expect(res.directive).toBe("transaction");
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("Uber");
@@ -75,6 +78,7 @@ test("Formula #4", async () => {
   const res = await costflow.parse("☕️ 4.2", testConfig);
   expectToBeNotError(res);
 
+  expect(res.directive).toBe("transaction");
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("Leplay's");
@@ -89,6 +93,21 @@ test("Formula #4", async () => {
     {
       account: "Expenses:Coffee",
       amount: +4.2,
+      currency: "USD",
+    },
+  ]);
+});
+
+test("Formula #5", async () => {
+  const res = await costflow.parse("tb bofa 1200", testConfig);
+  expectToBeNotError(res);
+
+  expect(res.directive).toBe("balance");
+  expect(res.date).toBe(today.add(1, "d").format("YYYY-MM-DD"));
+  expect(res.data).toEqual([
+    {
+      account: "Assets:BofA",
+      amount: 1200,
       currency: "USD",
     },
   ]);

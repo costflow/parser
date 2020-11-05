@@ -376,18 +376,21 @@ const parser = async (
   }
 
   /*
-   * Generate string output for Beancount
+   * Generate string output for Beancount, etc
    */
 
-  if (config.mode === "json") {
-    return result;
-  } else {
+  if (config.mode !== "json") {
     const str = generate(result, config.mode, {
       indent: config.indent,
       lineLength: config.lineLength,
     });
-    return str;
+    if (typeof str !== "string") {
+      return str;
+    } else {
+      result.output = str;
+    }
   }
+  return result;
 };
 
 export default {

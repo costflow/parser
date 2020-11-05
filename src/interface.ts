@@ -32,7 +32,8 @@ export interface UserConfig {
 export type ParseResult =
   | NParseResult.Result
   | NParseResult.TransactionResult
-  | NParseResult.Error;
+  | NParseResult.Error
+  | string;
 
 export namespace NParseResult {
   export interface Result extends Record<string, any> {

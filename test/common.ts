@@ -27,6 +27,7 @@ export const testConfig: UserConfig = {
     "☕️": "@Leplay's ☕️ {{ amount }} visa > coffee",
     loop: "loop",
     spotify: "@Spotify #music 15.98 USD visa > Expenses:Music",
+    tb: "tmr balance {{pre}}",
     uber: "@Uber {{ amount }} USD #uber Liabilities:Visa > Expenses:Transport",
   },
   alphavantage: "OFHZ0NT7D1Y2ZBRT", // https://www.alphavantage.co/support/

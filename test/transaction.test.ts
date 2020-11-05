@@ -80,7 +80,7 @@ test("Transaction #1.3", async () => {
 
 test("Transaction #1.4", async () => {
   const res = await costflow.parse(
-    "Rent 750 bofa + 750 visa > rent",
+    "Rent ^rent 750 bofa + 750 visa > rent",
     testConfig
   );
   expectToBeNotError(res);
@@ -90,6 +90,7 @@ test("Transaction #1.4", async () => {
   expect(res.payee).toBe(null);
   expect(res.narration).toBe("Rent");
   expect(res.tags).toEqual(["costflow"]);
+  expect(res.links).toEqual(["rent"]);
   expect(res.data).toEqual([
     {
       account: "Assets:BofA",
@@ -203,6 +204,34 @@ test("Transaction #1.10", async () => {
   const res = await costflow.parse(
     "@麦当劳 #food #mc 180 CNY visa > food",
     testConfig
+  );
+  expectToBeNotError(res);
+
+  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  expect(res.completed).toBe(true);
+  expect(res.payee).toBe("麦当劳");
+  expect(res.narration).toBe("");
+  expect(res.tags).toEqual(["costflow", "food", "mc"]);
+  expect(res.data).toEqual([
+    {
+      account: "Liabilities:Visa",
+      amount: -180,
+      currency: "CNY",
+    },
+    {
+      account: "Expenses:Food",
+      amount: 180,
+      currency: "CNY",
+    },
+  ]);
+});
+
+test("Transaction #1.11", async () => {
+  const res = await costflow.parse(
+    "@麦当劳 #food #mc 180 CNY visa to food",
+    Object.assign(testConfig, {
+      flowSymbol: "to",
+    })
   );
   expectToBeNotError(res);
 
@@ -426,6 +455,31 @@ test("Transaction #2.10", async () => {
   const res = await costflow.parse(
     "@麦当劳 #food #mc visa -180 CNY | food 180 CNY",
     testConfig
+  );
+  expectToBeNotError(res);
+  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  expect(res.completed).toBe(true);
+  expect(res.payee).toBe("麦当劳");
+  expect(res.narration).toBe("");
+  expect(res.tags).toEqual(["costflow", "food", "mc"]);
+  expect(res.data).toEqual([
+    {
+      account: "Liabilities:Visa",
+      amount: -180,
+      currency: "CNY",
+    },
+    {
+      account: "Expenses:Food",
+      amount: 180,
+      currency: "CNY",
+    },
+  ]);
+});
+
+test("Transaction #2.11", async () => {
+  const res = await costflow.parse(
+    "@麦当劳 #food #mc visa -180 CNY / food 180 CNY",
+    Object.assign(testConfig, { pipeSymbol: "/" })
   );
   expectToBeNotError(res);
   expect(res.date).toBe(today.format("YYYY-MM-DD"));

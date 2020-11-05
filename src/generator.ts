@@ -22,7 +22,7 @@ const generator = (
   let result: string = "";
 
   if (input.directive === "comment") {
-    result += ";" + input.data;
+    result += "; " + input.data;
   }
 
   if (
@@ -39,9 +39,15 @@ const generator = (
     input.directive === "option" ||
     input.directive === "pad"
   ) {
-    const key: string = Object.keys(input.data)[0];
-    const value: string = input.data[key];
+    let key: string = Object.keys(input.data)[0];
+    let value: string = input.data[key];
+    key = input.directive === "pad" ? key : `"${key}"`;
+    value = input.directive === "pad" ? value : `"${value}"`;
     result += `${input.date} ${input.directive} ${key} ${value}`;
+  }
+
+  if (input.directive === "price") {
+    result += `${input.date} ${input.directive} ${input.data.from} ${input.data.rate} ${input.data.to}`;
   }
 
   if (input.directive === "balance") {
@@ -53,11 +59,11 @@ const generator = (
     result += `${input.date} ${input.completed ? "*" : "!"}`;
     result += ` "${input.payee || ""}"`;
     result += ` "${input.narration}"`;
-    result += ` ${input.tags.length ? "#" : ""}${input.tags.join(" #")}`;
-    result += ` ${input.links.length ? "^" : ""}${input.links.join(" ^")}`;
-    result += "\n";
+    result += `${input.tags.length ? " #" : ""}${input.tags.join(" #")}`;
+    result += `${input.links.length ? " ^" : ""}${input.links.join(" ^")}`;
 
     input.data.forEach((aac: AAC) => {
+      result += "\n";
       result += fillBlank(indent);
       result += aac.account;
       result += fillBlank(
@@ -73,7 +79,6 @@ const generator = (
       result += aac.amount.toFixed(2);
       result += " ";
       result += aac.currency;
-      result += "\n";
     });
   }
 
