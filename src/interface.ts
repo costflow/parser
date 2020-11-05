@@ -29,7 +29,10 @@ export interface UserConfig {
   alphavantage?: string;
 }
 
-export type ParseResult = NParseResult.Result | NParseResult.Error;
+export type ParseResult =
+  | NParseResult.Result
+  | NParseResult.TransactionResult
+  | NParseResult.Error;
 
 export namespace NParseResult {
   export interface Result extends Record<string, any> {
@@ -39,18 +42,19 @@ export namespace NParseResult {
     created_at: string;
     shortcut?: string;
     timezone: string;
-    data: any[];
-
-    // Only for transactions
-    completed: boolean | null;
-    amount: number | null;
-    payee: string | null;
-    narration: string | null;
-    tags: string[];
-    links: string[];
+    data: any;
 
     // Generate string for 'beancount' mode
     output?: string;
+  }
+  export interface TransactionResult extends Result {
+    // Basic
+    directive: string;
+    date: string;
+    created_at: string;
+    shortcut?: string;
+    timezone: string;
+    data: any;
   }
 
   export interface Error {
@@ -65,7 +69,14 @@ export namespace NParseResult {
       | "FORMULA_LOOP"
       | "FORMULA_COMPILE_ERROR"
       | "DOUBLE_QUOTES_SHOULD_BE_FOUR"
+      | "OUTPUT_MODE_NOT_SUPPORT_YET"
       | "ALPHAVANTAGE_INVALID_KEY"
       | "ALPHAVANTAGE_EXCEED_RATE_LIMIT";
   }
+}
+
+export interface AAC {
+  amount: number;
+  account: string;
+  currency: string;
 }

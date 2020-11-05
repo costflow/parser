@@ -16,13 +16,14 @@ import { parseTransaction } from "./transaction";
 import { exchange, quote } from "./alphavantage";
 import { DIRECTIVES, DIRECTIVE_SHORTCUTS, DATE_SHORTCUTS } from "./config";
 import { UserConfig, ParseResult } from "./interface";
+import { generate } from "./generator";
 
 const parser = async (
   input: string,
   config: UserConfig,
   mode?: "json" | "beancount",
   _isFromFormula?: boolean | undefined
-): Promise<ParseResult> => {
+): Promise<ParseResult | string> => {
   /*
    * 0. Preparation
    */
@@ -378,10 +379,12 @@ const parser = async (
    * Generate string output for Beancount
    */
 
-  /*
-   * Return
-   */
-  return result;
+  if (config.mode === "json") {
+    return result;
+  } else {
+    const str = generate(result, config.mode);
+    return str;
+  }
 };
 
 export default {
