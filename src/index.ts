@@ -382,7 +382,10 @@ const parser = async (
   if (config.mode === "json") {
     return result;
   } else {
-    const str = generate(result, config.mode);
+    const str = generate(result, config.mode, {
+      indent: config.indent,
+      lineLength: config.lineLength,
+    });
     return str;
   }
 };
