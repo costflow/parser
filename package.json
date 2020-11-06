@@ -1,10 +1,11 @@
 {
   "name": "costflow",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Costflow Parser",
   "main": "lib/index.js",
   "browser": "dist/index.min.js",
   "types": "lib/index.d.ts",
+  "license": "GPL-3.0",
   "scripts": {
     "build": "tsc -v && tsc -b",
     "clean": "rm -rf coverage lib dist",
