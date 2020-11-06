@@ -26,6 +26,8 @@ yarn add costflow
 
 ```js
 import costflow from "costflow";
+// or imports with `require()`
+// const costflow = require("costflow").default
 
 const config = {
   mode: "beancount",
@@ -40,8 +42,10 @@ const config = {
   },
 };
 
-costflow.parse("spotify", config);
-costflow.parse("spotify", config, "json"); // force json mode
+const fn = async () => {
+  await costflow.parse("spotify", config);
+};
+fn();
 ```
 
 ## Features
