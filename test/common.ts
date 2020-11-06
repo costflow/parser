@@ -11,7 +11,7 @@ export const testConfig: UserConfig = {
   currency: "USD" as const,
   timezone: "America/Los_Angeles",
   tag: "#costflow",
-  accountMap: {
+  account: {
     alice: "Assets:Receivables:Alice",
     bob: "Assets:Receivables:Bob",
     bofa: "Assets:BofA",

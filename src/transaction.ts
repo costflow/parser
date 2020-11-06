@@ -16,7 +16,7 @@ interface TransactionResult {
 
 export const parseTransaction = (
   arr: string[],
-  accountMap: Record<string, string>,
+  account: Record<string, string>,
   symbolToRemove?: string
 ): TransactionResult => {
   let result: any = {
@@ -33,8 +33,8 @@ export const parseTransaction = (
       result.amount = convertToNumber(item);
       return false;
     }
-    if (accountMap[item]) {
-      result.account = accountMap[item];
+    if (account[item]) {
+      result.account = account[item];
       return false;
     }
     if (isAccountName(item)) {

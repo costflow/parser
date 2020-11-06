@@ -37,7 +37,7 @@ const parser = async (
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       flowSymbol: ">",
       pipeSymbol: "|",
-      accountMap: {},
+      account: {},
       formula: {},
     },
     config
@@ -193,19 +193,19 @@ const parser = async (
           _doubleQuotedIndexInInput[0],
           _doubleQuotedIndexInInput[1] + 1
         ),
-        config.accountMap
+        config.account
       );
       const val = serialize(
         _inputArr.slice(_doubleQuotedIndexInInput[2]),
-        config.accountMap
+        config.account
       );
 
       result.data = Object.assign(result.data, {
         [key]: val,
       });
     } else {
-      const key = serialize([_word()], config.accountMap);
-      const val = serialize(_inputArr.slice(_index + 1), config.accountMap);
+      const key = serialize([_word()], config.account);
+      const val = serialize(_inputArr.slice(_index + 1), config.account);
       result.data = {
         [key]: val, // Record<string, string>
       };
@@ -257,7 +257,7 @@ const parser = async (
   if (result.directive === "balance") {
     const { account, amount, currency } = parseTransaction(
       _inputArr.slice(_index),
-      config.accountMap
+      config.account
     );
     result.data = [
       {
@@ -304,7 +304,7 @@ const parser = async (
       for (let f = 0; f < _flowSliceIndex.length; f++) {
         const parseResult = parseTransaction(
           _inputArr.slice(_flowSliceIndex[f], _flowSliceIndex[f + 1]),
-          config.accountMap,
+          config.account,
           config.flowSymbol
         );
         const { account, narration, payee, tags, links } = parseResult;
@@ -348,7 +348,7 @@ const parser = async (
       for (let f = 0; f < _pipeSliceIndex.length; f++) {
         const parseResult = parseTransaction(
           _inputArr.slice(_pipeSliceIndex[f], _pipeSliceIndex[f + 1]),
-          config.accountMap,
+          config.account,
           config.pipeSymbol
         );
         const {

@@ -13,7 +13,7 @@ export interface UserConfig {
   // customize
   flowSymbol?: string;
   pipeSymbol?: string;
-  accountMap: Record<string, string>;
+  account: Record<string, string>;
   formula: Record<string, string>;
 
   // for transactions

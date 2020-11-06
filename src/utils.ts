@@ -66,9 +66,9 @@ export const convertToYMD = (str: string): string | null => {
  */
 export const serialize = (
   arr: string[],
-  accountMap: Record<string, string>
+  account: Record<string, string>
 ): string => {
   if (!arr.length) return "";
-  arr = arr.map((item) => accountMap[item] || item);
+  arr = arr.map((item) => account[item] || item);
   return arr.join(" ").replace(/\"/g, "");
 };

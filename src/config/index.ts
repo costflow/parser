@@ -25,7 +25,7 @@ export const DIRECTIVES: string[] = [
   "pad",
   "balance",
   "transaction",
-  "set", // set accountMaps
+  // "set", // later: set account map?
 ];
 
 export const DIRECTIVE_SHORTCUTS: Record<string, string> = {
