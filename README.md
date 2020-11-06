@@ -69,7 +69,7 @@ If you want to use Costflow Parser to develop non open sourced sites, projects, 
 
 ### Open source license
 
-If you are creating an open source application under a license compatible with the [GNU GPL license v3](https://www.gnu.org/licenses/gpl-3.0.html), you may use fullPage under the terms of the GPLv3.
+If you are creating an open source application under a license compatible with the [GNU GPL license v3](https://www.gnu.org/licenses/gpl-3.0.html), you may use Costflow Parser under the terms of the GPLv3.
 
 **The credit comments in the JavaScript and CSS files should be kept intact** (even after combination or minification)
 
@@ -77,4 +77,4 @@ If you are creating an open source application under a license compatible with t
 
 [https://github.com/orgs/costflow/projects](https://github.com/orgs/costflow/projects)
 
-Check out [Costflow Syntax](https://github.com/costflow/syntax) for more information.
+Check out [Costflow Syntax](https://docs.costflow.io/) for more information.
