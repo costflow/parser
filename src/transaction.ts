@@ -25,7 +25,7 @@ export const parseTransaction = (
   };
   let doubleQuotesCount = 0;
 
-  arr = arr.filter((item) => {
+  arr = arr.reverse().filter((item) => {
     if (item.indexOf('"') >= 0) {
       doubleQuotesCount++;
     }
@@ -33,11 +33,11 @@ export const parseTransaction = (
       result.amount = convertToNumber(item);
       return false;
     }
-    if (account[item]) {
+    if (account[item] && !result.account) {
       result.account = account[item];
       return false;
     }
-    if (isAccountName(item)) {
+    if (isAccountName(item) && !result.account) {
       result.account = item;
       return false;
     }
@@ -61,15 +61,23 @@ export const parseTransaction = (
     return true;
   });
 
-  const strLeft = arr.join(" ");
+  const strLeft = arr.reverse().join(" ");
   if (doubleQuotesCount === 4) {
     let tmp = strLeft.split('"');
     tmp = tmp.filter((str) => str.length && str.trim().length);
     result.payee = tmp[0];
     result.narration = tmp[1];
   } else {
-    result.narration = strLeft;
+    if (!result.account) {
+      result.account = arr[arr.length - 1];
+      result.narration = arr.slice(0, arr.length - 1);
+    } else {
+      result.narration = strLeft;
+    }
   }
+
+  result.tags = result.tags.reverse();
+  result.links = result.links.reverse();
 
   result = Object.assign(
     {

@@ -373,6 +373,27 @@ const parser = async (
         result.links = _.uniq(result.links.concat(links));
       }
     }
+
+    if (!_flowSymbolIndex.length && !_pipeSymbolIndex.length) {
+      const parseResult = parseTransaction(
+        _inputArr.slice(_index),
+        config.account
+      );
+      const data: any = [];
+      const { account, currency, narration, payee, tags, links } = parseResult;
+      let { amount } = parseResult;
+
+      data.push({
+        account,
+        amount,
+        currency: currency || config.currency,
+      });
+      result.data = data; // AccountAmountCurrency[]
+      result.payee = result.payee || payee;
+      result.narration = result.narration || narration;
+      result.tags = _.uniq(result.tags.concat(tags));
+      result.links = _.uniq(result.links.concat(links));
+    }
   }
 
   /*
@@ -396,3 +417,16 @@ const parser = async (
 export default {
   parse: parser,
 };
+
+parser("Pay for rent 180 CNY bofa > rx + ry + food", {
+  currency: "USD",
+  mode: "beancount",
+  account: {
+    bofa: "A:A",
+    rx: "A:X",
+    ry: "A:Y",
+    food: "E:Food",
+    rent: "E:Rent",
+  },
+  formula: {},
+});

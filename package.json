@@ -1,6 +1,6 @@
 {
   "name": "costflow",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Costflow Parser",
   "main": "lib/index.js",
   "browser": "dist/index.min.js",
@@ -28,11 +28,11 @@
     "plain text accounting",
     "double-entry bookkeeping"
   ],
-  "author": "leplay",
+  "author": "leplay <_@leplay.net> (https://leplay.net)",
   "bugs": {
     "url": "https://github.com/costflow/parser/issues"
   },
-  "homepage": "https://github.com/costflow/parser#readme",
+  "homepage": "https://costflow.io/",
   "engines": {
     "node": ">=8.0.0",
     "npm": ">=5.0.0"

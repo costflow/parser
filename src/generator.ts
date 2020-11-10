@@ -69,7 +69,7 @@ const generator = (
       result += fillBlank(
         lineLength -
           indent -
-          aac.account.length -
+          (aac.account ? aac.account.length : 0) -
           ((aac.amount > 0 ? "+" : "") + String(aac.amount.toFixed(2))).length -
           1 -
           aac.currency.length
