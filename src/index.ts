@@ -417,16 +417,3 @@ const parser = async (
 export default {
   parse: parser,
 };
-
-parser("Pay for rent 180 CNY bofa > rx + ry + food", {
-  currency: "USD",
-  mode: "beancount",
-  account: {
-    bofa: "A:A",
-    rx: "A:X",
-    ry: "A:Y",
-    food: "E:Food",
-    rent: "E:Rent",
-  },
-  formula: {},
-});
