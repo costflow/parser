@@ -6,7 +6,8 @@ interface Variables {
   pre?: string;
 }
 
-export const compileFormula = (input: string, data: Variables) => {
+export const compileFormula = (input: string | null, data: Variables) => {
+  if (!input) return;
   const compiled = _.template(input);
   return compiled(data);
 };

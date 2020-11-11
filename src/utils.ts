@@ -76,6 +76,16 @@ export const serialize = (
   account: Record<string, string>
 ): string => {
   if (!arr.length) return "";
-  arr = arr.map((item) => account[item] || item);
+  arr = arr.map((item) => getItemByInsensitiveKey(item, account) || item);
   return arr.join(" ").replace(/\"/g, "");
+};
+
+export const getItemByInsensitiveKey = (
+  searchKey: string,
+  obj: Record<string, any>
+) => {
+  const originalKey = Object.keys(obj).find(
+    (key) => key.toLowerCase() === searchKey.toLowerCase()
+  );
+  return originalKey ? obj[originalKey] : null;
 };

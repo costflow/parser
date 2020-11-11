@@ -2,7 +2,13 @@
  * Parse Transaction
  */
 
-import { isNumber, convertToNumber, isAccountName, isCurrency } from "./utils";
+import {
+  isNumber,
+  convertToNumber,
+  isAccountName,
+  isCurrency,
+  getItemByInsensitiveKey,
+} from "./utils";
 import { UserConfig } from "./interface";
 
 interface TransactionResult {
@@ -34,8 +40,11 @@ export const parseTransaction = (
       result.amount = convertToNumber(item);
       return false;
     }
-    if (config?.account[item] && !result.account) {
-      result.account = config.account[item];
+    const accountMatch = config?.account
+      ? getItemByInsensitiveKey(item, config.account)
+      : null;
+    if (accountMatch && !result.account) {
+      result.account = accountMatch;
       return false;
     }
     if (isAccountName(item) && !result.account) {

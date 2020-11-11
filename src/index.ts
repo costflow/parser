@@ -10,6 +10,7 @@ import {
   convertToNumber,
   nowWithTimezone,
   isCurrency,
+  getItemByInsensitiveKey,
 } from "./utils";
 import { compileFormula } from "./formula";
 import { parseTransaction } from "./transaction";
@@ -126,7 +127,10 @@ const parser = async (
     }
   } else if (DIRECTIVES.includes(_word())) {
     result.directive = _word();
-  } else if (config?.formula && config?.formula[_word()]) {
+  } else if (
+    config?.formula &&
+    getItemByInsensitiveKey(_word(), config.formula)
+  ) {
     result.directive = "formula";
     _index--;
   } else {
@@ -142,15 +146,16 @@ const parser = async (
   /*
    * 2.1 Parse [formula] directive
    */
+  const formulaMatch = getItemByInsensitiveKey(_word(), config.formula);
   if (result.directive === "formula") {
-    if (!config || !config.formula || !config.formula[_word()]) {
+    if (!config || !config.formula || !formulaMatch) {
       return { error: "FORMULA_NOT_FOUND" };
     }
     if (_isFromFormula) {
       return { error: "FORMULA_LOOP" };
     }
 
-    const compiled = compileFormula(config.formula[_word()], {
+    const compiled = compileFormula(formulaMatch, {
       pre: _inputArr.slice(_index + 1).join(" "),
       amount: _numbersInInput.length ? _numbersInInput[0] : "",
     });

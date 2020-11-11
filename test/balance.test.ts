@@ -21,7 +21,7 @@ test("Balance #1", async () => {
   ]);
 });
 test("Balance #2", async () => {
-  const res = await costflow.parse("tmr balance bofa 1024 CNY", testConfig);
+  const res = await costflow.parse("tmr balance BofA 1024 CNY", testConfig);
   expectToBeNotError(res);
   expect(res.date).toBe(today.add(1, "d").format("YYYY-MM-DD"));
   expect(res.directive).toBe("balance");
