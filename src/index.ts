@@ -257,7 +257,7 @@ const parser = async (
   if (result.directive === "balance") {
     const { account, amount, currency } = parseTransaction(
       _inputArr.slice(_index),
-      config.account
+      config
     );
     result.data = [
       {
@@ -304,7 +304,7 @@ const parser = async (
       for (let f = 0; f < _flowSliceIndex.length; f++) {
         const parseResult = parseTransaction(
           _inputArr.slice(_flowSliceIndex[f], _flowSliceIndex[f + 1]),
-          config.account,
+          config,
           config.flowSymbol
         );
         const { account, narration, payee, tags, links } = parseResult;
@@ -348,7 +348,7 @@ const parser = async (
       for (let f = 0; f < _pipeSliceIndex.length; f++) {
         const parseResult = parseTransaction(
           _inputArr.slice(_pipeSliceIndex[f], _pipeSliceIndex[f + 1]),
-          config.account,
+          config,
           config.pipeSymbol
         );
         const {
@@ -375,10 +375,7 @@ const parser = async (
     }
 
     if (!_flowSymbolIndex.length && !_pipeSymbolIndex.length) {
-      const parseResult = parseTransaction(
-        _inputArr.slice(_index),
-        config.account
-      );
+      const parseResult = parseTransaction(_inputArr.slice(_index), config);
       const data: any = [];
       const { account, currency, narration, payee, tags, links } = parseResult;
       let { amount } = parseResult;

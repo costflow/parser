@@ -3,6 +3,7 @@
  */
 
 import { isNumber, convertToNumber, isAccountName, isCurrency } from "./utils";
+import { UserConfig } from "./interface";
 
 interface TransactionResult {
   amount: number | null;
@@ -16,7 +17,7 @@ interface TransactionResult {
 
 export const parseTransaction = (
   arr: string[],
-  account: Record<string, string>,
+  config: UserConfig,
   symbolToRemove?: string
 ): TransactionResult => {
   let result: any = {
@@ -33,8 +34,8 @@ export const parseTransaction = (
       result.amount = convertToNumber(item);
       return false;
     }
-    if (account[item] && !result.account) {
-      result.account = account[item];
+    if (config?.account[item] && !result.account) {
+      result.account = config.account[item];
       return false;
     }
     if (isAccountName(item) && !result.account) {
@@ -68,10 +69,11 @@ export const parseTransaction = (
     result.payee = tmp[0];
     result.narration = tmp[1];
   } else {
-    if (!result.account) {
+    if (!result.account && !config?.default) {
       result.account = arr[arr.length - 1];
       result.narration = arr.slice(0, arr.length - 1);
     } else {
+      result.account = result.account || config?.default || null;
       result.narration = strLeft;
     }
   }

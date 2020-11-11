@@ -15,6 +15,7 @@ export interface UserConfig {
   pipeSymbol?: string;
   account: Record<string, string>;
   formula: Record<string, string>;
+  default?: string; // default account full name
 
   // for transactions
   insertTime?: "metadata" | null;
