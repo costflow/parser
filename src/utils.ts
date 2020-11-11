@@ -29,9 +29,16 @@ export const isAccountName = (str: string): boolean => {
 /*
  * Currency
  */
-export const isCurrency = (str: string): boolean => {
-  // const allUpperCaseReg = /^[A-Z]{3,}$/g;
-  return currencyList.includes(str) || cryptoList.includes(str);
+export const isCurrency = (
+  str: string,
+  upperCaseAsCurrencyCode?: boolean
+): boolean => {
+  const allUpperCaseReg = /^[A-Z]{3,}$/;
+  return (
+    (upperCaseAsCurrencyCode && allUpperCaseReg.test(str)) ||
+    currencyList.includes(str) ||
+    cryptoList.includes(str)
+  );
 };
 
 /*

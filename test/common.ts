@@ -30,6 +30,8 @@ export const testConfig: UserConfig = {
     tb: "tmr balance {{pre}}",
     uber: "@Uber {{ amount }} USD #uber Liabilities:Visa > Expenses:Transport",
   },
+  defaultAccount: "Assets:BofA",
+  upperCaseAsCurrencyCode: true,
   alphavantage: "OFHZ0NT7D1Y2ZBRT", // https://www.alphavantage.co/support/
   indent: 2,
   lineLength: 60,

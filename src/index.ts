@@ -226,7 +226,7 @@ const parser = async (
         _index++;
       }
     }
-    const _currencies = _inputArr.filter((word) => isCurrency(word));
+    const _currencies = _inputArr.filter((word) => isCurrency(word, false));
     if (!_currencies.length) {
       // quote
       const remote = await quote(config?.alphavantage, _word());

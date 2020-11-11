@@ -146,6 +146,42 @@ test("Transaction #1.5", async () => {
   ]);
 });
 
+test("Transaction #1.6", async () => {
+  const res = await costflow.parse(
+    "! Sushi 7200 JPY > food + alice + bob",
+    testConfig
+  );
+  expectToBeNotError(res);
+
+  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  expect(res.completed).toBe(false);
+  expect(res.payee).toBe(null);
+  expect(res.narration).toBe("Sushi");
+  expect(res.tags).toEqual(["costflow"]);
+  expect(res.data).toEqual([
+    {
+      account: "Assets:BofA", // default account
+      amount: -7200,
+      currency: "JPY",
+    },
+    {
+      account: "Expenses:Food",
+      amount: 2400,
+      currency: "JPY",
+    },
+    {
+      account: "Assets:Receivables:Alice",
+      amount: 2400,
+      currency: "JPY",
+    },
+    {
+      account: "Assets:Receivables:Bob",
+      amount: 2400,
+      currency: "JPY",
+    },
+  ]);
+});
+
 // todo: support @ / @@ / {}
 // test("Transaction #1.6", async () => {
 //   const res = await costflow.parse(
@@ -377,6 +413,42 @@ test("Transaction #2.5", async () => {
   expect(res.data).toEqual([
     {
       account: "Assets:BofA",
+      amount: -7200,
+      currency: "JPY",
+    },
+    {
+      account: "Expenses:Food",
+      amount: 2400,
+      currency: "JPY",
+    },
+    {
+      account: "Assets:Receivables:Alice",
+      amount: 2400,
+      currency: "JPY",
+    },
+    {
+      account: "Assets:Receivables:Bob",
+      amount: 2400,
+      currency: "JPY",
+    },
+  ]);
+});
+
+test("Transaction #2.6", async () => {
+  const res = await costflow.parse(
+    "! Sushi -7200 JPY | food 2400 JPY | alice 2400 JPY | bob 2400 JPY",
+    testConfig
+  );
+  expectToBeNotError(res);
+
+  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  expect(res.completed).toBe(false);
+  expect(res.payee).toBe(null);
+  expect(res.narration).toBe("Sushi");
+  expect(res.tags).toEqual(["costflow"]);
+  expect(res.data).toEqual([
+    {
+      account: "Assets:BofA", // default account
       amount: -7200,
       currency: "JPY",
     },

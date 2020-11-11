@@ -42,7 +42,7 @@ export const parseTransaction = (
       result.account = item;
       return false;
     }
-    if (isCurrency(item)) {
+    if (isCurrency(item, config?.upperCaseAsCurrencyCode || false)) {
       result.currency = item;
       return false;
     }
@@ -69,11 +69,11 @@ export const parseTransaction = (
     result.payee = tmp[0];
     result.narration = tmp[1];
   } else {
-    if (!result.account && !config?.default) {
+    if (!result.account && !config?.defaultAccount) {
       result.account = arr[arr.length - 1];
       result.narration = arr.slice(0, arr.length - 1);
     } else {
-      result.account = result.account || config?.default || null;
+      result.account = result.account || config?.defaultAccount || null;
       result.narration = strLeft;
     }
   }

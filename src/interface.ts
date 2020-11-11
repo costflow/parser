@@ -15,9 +15,10 @@ export interface UserConfig {
   pipeSymbol?: string;
   account: Record<string, string>;
   formula: Record<string, string>;
-  default?: string; // default account full name
 
   // for transactions
+  defaultAccount?: string; // default account full name
+  upperCaseAsCurrencyCode?: boolean;
   insertTime?: "metadata" | null;
   tag?: string | null;
   link?: string | null;
