@@ -1,6 +1,6 @@
 {
   "name": "costflow",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "Costflow Parser",
   "main": "lib/index.js",
   "browser": "dist/index.min.js",
