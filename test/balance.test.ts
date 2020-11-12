@@ -33,3 +33,33 @@ test("Balance #2", async () => {
     },
   ]);
 });
+test("Balance #3: overwriteConfig", async () => {
+  const res = await costflow.parse("tmr balance BofA 1024", testConfig, {
+    currency: "JPY",
+  });
+  expectToBeNotError(res);
+  expect(res.date).toBe(today.add(1, "d").format("YYYY-MM-DD"));
+  expect(res.directive).toBe("balance");
+  expect(res.data).toEqual([
+    {
+      account: "Assets:BofA",
+      amount: 1024,
+      currency: "JPY",
+    },
+  ]);
+});
+test("Balance #3: overwriteResult", async () => {
+  const res = await costflow.parse("tmr balance BofA 1024", testConfig, null, {
+    date: "2020-11-11",
+  });
+  expectToBeNotError(res);
+  expect(res.date).toBe("2020-11-11");
+  expect(res.directive).toBe("balance");
+  expect(res.data).toEqual([
+    {
+      account: "Assets:BofA",
+      amount: 1024,
+      currency: "USD",
+    },
+  ]);
+});

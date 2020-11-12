@@ -22,8 +22,8 @@ import { generate } from "./generator";
 const parser = async (
   input: string,
   config: UserConfig,
-  overwriteConfig?: Partial<UserConfig>,
-  overwriteResult?: Partial<ParseResult>,
+  overwriteConfig?: Partial<UserConfig> | null,
+  overwriteResult?: Partial<ParseResult> | null,
   _isFromFormula?: boolean | undefined
 ): Promise<ParseResult | string> => {
   /*
