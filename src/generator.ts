@@ -10,7 +10,7 @@ const fillBlank = (len: number): string => {
 
 const generator = (
   input: NParseResult.Result | NParseResult.TransactionResult,
-  mode: "beancount",
+  mode: "beancount" | undefined,
   config: Partial<UserConfig>
 ): string | NParseResult.Error => {
   if (mode !== "beancount") {

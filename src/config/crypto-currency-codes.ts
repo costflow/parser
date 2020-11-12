@@ -33,7 +33,7 @@ export const cryptoList = [
   "ARN",
   "AST",
   "ATB",
-  "ATM",
+  // "ATM", disable cause it's also stand for real ATM machine
   "ATS",
   "AUR",
   "AVT",

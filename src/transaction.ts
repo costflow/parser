@@ -80,7 +80,7 @@ export const parseTransaction = (
   } else {
     if (!result.account && !config?.defaultAccount) {
       result.account = arr[arr.length - 1];
-      result.narration = arr.slice(0, arr.length - 1);
+      result.narration = arr.slice(0, arr.length - 1).join(" ");
     } else {
       result.account = result.account || config?.defaultAccount || null;
       result.narration = strLeft;

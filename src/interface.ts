@@ -5,7 +5,7 @@ export type ArrayElement<
 > = ArrayType[number];
 
 export interface UserConfig {
-  mode: "json" | "beancount";
+  mode?: "json" | "beancount";
   // user related
   currency: ArrayElement<typeof currencyList>;
   timezone?: string;
@@ -13,8 +13,8 @@ export interface UserConfig {
   // customize
   flowSymbol?: string;
   pipeSymbol?: string;
-  account: Record<string, string>;
-  formula: Record<string, string>;
+  account?: Record<string, string>;
+  formula?: Record<string, string>;
 
   // for transactions
   defaultAccount?: string; // default account full name

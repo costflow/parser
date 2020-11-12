@@ -73,17 +73,18 @@ export const convertToYMD = (str: string): string | null => {
  */
 export const serialize = (
   arr: string[],
-  account: Record<string, string>
+  account?: Record<string, string>
 ): string => {
-  if (!arr.length) return "";
+  if (!arr.length || account) return "";
   arr = arr.map((item) => getItemByInsensitiveKey(item, account) || item);
   return arr.join(" ").replace(/\"/g, "");
 };
 
 export const getItemByInsensitiveKey = (
   searchKey: string,
-  obj: Record<string, any>
+  obj: Record<string, any> | undefined
 ) => {
+  if (!obj) return null;
   const originalKey = Object.keys(obj).find(
     (key) => key.toLowerCase() === searchKey.toLowerCase()
   );

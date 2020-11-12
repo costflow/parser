@@ -22,7 +22,8 @@ import { generate } from "./generator";
 const parser = async (
   input: string,
   config: UserConfig,
-  mode?: "json" | "beancount",
+  overwriteConfig?: Partial<UserConfig>,
+  overwriteResult?: Partial<ParseResult>,
   _isFromFormula?: boolean | undefined
 ): Promise<ParseResult | string> => {
   /*
@@ -34,6 +35,7 @@ const parser = async (
 
   config = Object.assign(
     {
+      mode: "json",
       currency: "USD",
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       flowSymbol: ">",
@@ -41,9 +43,9 @@ const parser = async (
       account: {},
       formula: {},
     },
-    config
+    config,
+    overwriteConfig || {}
   );
-  mode = mode || config.mode || "json";
 
   let _numbersInInput: number[] = [];
   let _doubleQuotedIndexInInput: number[] = [];
@@ -90,7 +92,7 @@ const parser = async (
   };
 
   // result
-  const result: any = {
+  var result: any = {
     created_at: _now().toISOString(),
     timezone: config.timezone,
   };
@@ -160,7 +162,7 @@ const parser = async (
       amount: _numbersInInput.length ? _numbersInInput[0] : "",
     });
     if (typeof compiled === "string") {
-      return parser(compiled, config, mode, true);
+      return parser(compiled, config, overwriteConfig, overwriteResult, true);
     } else {
       return { error: "FORMULA_COMPILE_ERROR" };
     }
@@ -397,6 +399,12 @@ const parser = async (
       result.links = _.uniq(result.links.concat(links));
     }
   }
+
+  /*
+   * Overwrite parse result if necessary
+   */
+
+  result = Object.assign(result, overwriteResult || {});
 
   /*
    * Generate string output for Beancount, etc
