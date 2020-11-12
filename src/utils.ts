@@ -75,7 +75,7 @@ export const serialize = (
   arr: string[],
   account?: Record<string, string>
 ): string => {
-  if (!arr.length || account) return "";
+  if (!arr.length || !account) return "";
   arr = arr.map((item) => getItemByInsensitiveKey(item, account) || item);
   return arr.join(" ").replace(/\"/g, "");
 };
