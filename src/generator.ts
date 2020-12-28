@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { NParseResult, UserConfig, AAC } from "./interface";
 
 const fillBlank = (len: number): string => {
@@ -14,7 +15,7 @@ const generator = (
   config: Partial<UserConfig>
 ): string | NParseResult.Error => {
   if (mode !== "beancount") {
-    return { error: "OUTPUT_MODE_NOT_SUPPORT_YET" };
+    return { error: "OUTPUT_MODE_NOT_SUPPORT" };
   }
 
   const { indent = 2, lineLength = 60 } = config;
@@ -61,6 +62,22 @@ const generator = (
     result += ` "${input.narration}"`;
     result += `${input.tags.length ? " #" : ""}${input.tags.join(" #")}`;
     result += `${input.links.length ? " ^" : ""}${input.links.join(" ^")}`;
+
+    if (config.insertTime === "metadata") {
+      result += "\n";
+      result += fillBlank(indent);
+      const now = config.timezone
+        ? dayjs(new Date(input.created_at)).tz(config.timezone)
+        : dayjs(new Date(input.created_at));
+      let dateTime = "";
+      if (input.date !== now.format("YYYY-MM-DD")) {
+        dateTime += now.format("YYYY-MM-DD HH:mm:ss");
+      } else {
+        dateTime += now.format("HH:mm:ss");
+      }
+
+      result += `time: "${dateTime}"`;
+    }
 
     input.data.forEach((aac: AAC) => {
       result += "\n";

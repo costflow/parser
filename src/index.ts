@@ -411,10 +411,7 @@ const parser = async (
    */
 
   if (config.mode !== "json") {
-    const str = generate(result, config.mode, {
-      indent: config.indent,
-      lineLength: config.lineLength,
-    });
+    const str = generate(result, config.mode, config);
     if (typeof str !== "string") {
       return str;
     } else {
