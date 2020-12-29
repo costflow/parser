@@ -1,4 +1,4 @@
-import costflow from "../lib";
+import costflow from "..";
 import * as alphavantage from "../src/alphavantage";
 import { expectToBeNotError, testConfig, today } from "./common";
 
@@ -13,18 +13,22 @@ test("Snap #1", async () => {
     "CAD",
     "USD"
   );
-  const res = await costflow.parse("$ CAD", testConfig);
-  expectToBeNotError(res);
+  if ("error" in exchange) {
+    expect(exchange.error).toBe("ALPHAVANTAGE_EXCEED_RATE_LIMIT");
+  } else {
+    const res = await costflow.parse("$ CAD", testConfig);
+    expectToBeNotError(res);
 
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
-  expect(res.directive).toBe("snap");
-  expect(res.shortcut).toBe("$");
-  expect(res.data).toEqual({
-    from: "CAD",
-    to: "USD",
-    rate: exchange.rate,
-    api: true,
-  });
+    expect(res.date).toBe(today.format("YYYY-MM-DD"));
+    expect(res.directive).toBe("snap");
+    expect(res.shortcut).toBe("$");
+    expect(res.data).toEqual({
+      from: "CAD",
+      to: "USD",
+      rate: exchange.rate,
+      api: true,
+    });
+  }
 });
 
 test("Snap #2", async () => {
@@ -33,36 +37,44 @@ test("Snap #2", async () => {
     "USD",
     "CNY"
   );
-  const res = await costflow.parse("$ 100 USD to CNY", testConfig);
-  expectToBeNotError(res);
+  if ("error" in exchange) {
+    expect(exchange.error).toBe("ALPHAVANTAGE_EXCEED_RATE_LIMIT");
+  } else {
+    const res = await costflow.parse("$ 100 USD to CNY", testConfig);
+    expectToBeNotError(res);
 
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
-  expect(res.directive).toBe("snap");
-  expect(res.shortcut).toBe("$");
-  expect(res.data).toEqual({
-    from: "USD",
-    to: "CNY",
-    amount: 100,
-    rate: exchange.rate,
-    api: true,
-  });
+    expect(res.date).toBe(today.format("YYYY-MM-DD"));
+    expect(res.directive).toBe("snap");
+    expect(res.shortcut).toBe("$");
+    expect(res.data).toEqual({
+      from: "USD",
+      to: "CNY",
+      amount: 100,
+      rate: exchange.rate,
+      api: true,
+    });
+  }
 });
 
 test("Snap #3", async () => {
   const quote = await alphavantage.quote(testConfig.alphavantage, "AAPL");
-  const res = await costflow.parse("$ 200 AAPL", testConfig);
-  expectToBeNotError(res);
+  if ("error" in quote) {
+    expect(quote.error).toBe("ALPHAVANTAGE_EXCEED_RATE_LIMIT");
+  } else {
+    const res = await costflow.parse("$ 200 AAPL", testConfig);
+    expectToBeNotError(res);
 
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
-  expect(res.directive).toBe("snap");
-  expect(res.shortcut).toBe("$");
-  expect(res.data).toEqual({
-    from: "AAPL",
-    to: "USD",
-    amount: 200,
-    rate: quote.price,
-    percent: quote.percent,
-    change: quote.change,
-    api: true,
-  });
+    expect(res.date).toBe(today.format("YYYY-MM-DD"));
+    expect(res.directive).toBe("snap");
+    expect(res.shortcut).toBe("$");
+    expect(res.data).toEqual({
+      from: "AAPL",
+      to: "USD",
+      amount: 200,
+      rate: quote.price,
+      percent: quote.percent,
+      change: quote.change,
+      api: true,
+    });
+  }
 });

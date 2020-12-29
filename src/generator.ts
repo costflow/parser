@@ -57,20 +57,25 @@ const generator = (
   }
 
   if (input.directive === "transaction") {
-    result += `${input.date} ${input.completed ? "*" : "!"}`;
-    result += ` "${input.payee || ""}"`;
-    result += ` "${input.narration}"`;
-    result += `${input.tags.length ? " #" : ""}${input.tags.join(" #")}`;
-    result += `${input.links.length ? " ^" : ""}${input.links.join(" ^")}`;
+    let transaction = input as NParseResult.TransactionResult;
+    result += `${transaction.date} ${transaction.completed ? "*" : "!"}`;
+    result += ` "${transaction.payee || ""}"`;
+    result += ` "${transaction.narration}"`;
+    result += `${transaction.tags.length ? " #" : ""}${transaction.tags.join(
+      " #"
+    )}`;
+    result += `${transaction.links.length ? " ^" : ""}${transaction.links.join(
+      " ^"
+    )}`;
 
     if (config.insertTime === "metadata") {
       result += "\n";
       result += fillBlank(indent);
       const now = config.timezone
-        ? dayjs(new Date(input.created_at)).tz(config.timezone)
-        : dayjs(new Date(input.created_at));
+        ? dayjs(new Date(transaction.created_at)).tz(config.timezone)
+        : dayjs(new Date(transaction.created_at));
       let dateTime = "";
-      if (input.date !== now.format("YYYY-MM-DD")) {
+      if (transaction.date !== now.format("YYYY-MM-DD")) {
         dateTime += now.format("YYYY-MM-DD HH:mm:ss");
       } else {
         dateTime += now.format("HH:mm:ss");
@@ -79,7 +84,7 @@ const generator = (
       result += `time: "${dateTime}"`;
     }
 
-    input.data.forEach((aac: AAC) => {
+    transaction.data.forEach((aac: AAC) => {
       result += "\n";
       result += fillBlank(indent);
       result += aac.account;

@@ -1,5 +1,6 @@
-import costflow from "../lib";
+import costflow from "..";
 import * as alphavantage from "../src/alphavantage";
+import { NParseResult, NAlphaVantage } from "../src/interface";
 import { expectToBeNotError, testConfig, today } from "./common";
 
 /*
@@ -17,15 +18,18 @@ test("Price #1", async () => {
     rate: 1.08,
   });
 });
+
 test("Price #2", async () => {
-  const exchange = await alphavantage.exchange(
+  const exchange = (await alphavantage.exchange(
     testConfig.alphavantage,
     "USD",
     "CNY"
-  );
-  const res = await costflow.parse("price USD to CNY", testConfig);
-  expectToBeNotError(res);
+  )) as NAlphaVantage.IExchangeSuccessResponse;
 
+  const res = (await costflow.parse(
+    "price USD to CNY",
+    testConfig
+  )) as NParseResult.Result;
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
   expect(res.directive).toBe("price");
   expect(res.data).toEqual({
@@ -35,8 +39,12 @@ test("Price #2", async () => {
     api: true,
   });
 });
+
 test("Price #3", async () => {
-  const quote = await alphavantage.quote(testConfig.alphavantage, "AAPL");
+  const quote = (await alphavantage.quote(
+    testConfig.alphavantage,
+    "AAPL"
+  )) as NAlphaVantage.IQuoteSuccessResponse;
   const res = await costflow.parse("price AAPL", testConfig);
   expectToBeNotError(res);
 

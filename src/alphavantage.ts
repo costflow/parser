@@ -1,29 +1,18 @@
 import axios from "axios";
 import dayjs from "dayjs";
-import type { cryptoList } from "./config/crypto-currency-codes";
-import type { exchangeList } from "./config/currency-codes";
-
-type ArrayElement<ArrayType extends readonly unknown[]> = ArrayType[number];
-
-export type AlphaVantageCryptoCurrency = ArrayElement<typeof cryptoList>;
-export type AlphaVantageFiatCurrency = ArrayElement<typeof exchangeList>;
-export type AlphaVantageCurrency =
-  | AlphaVantageCryptoCurrency
-  | AlphaVantageFiatCurrency;
-
-export interface IExchangeResponse {
-  rate: number;
-  updatedAt: number;
-}
-
+import {
+  AlphaVantageCurrency,
+  ExchangeResponse,
+  QuoteResponse,
+} from "./interface";
 export const exchange = function (
   key: string | undefined,
   from: AlphaVantageCurrency,
   to: AlphaVantageCurrency
-) {
-  return new Promise<IExchangeResponse>(function (resolve, reject) {
+): Promise<ExchangeResponse> {
+  return new Promise(function (resolve) {
     if (!key) {
-      reject(Error("ALPHA_VANTAGE_KEY_NOT_EXIST"));
+      resolve({ error: "ALPHAVANTAGE_INVALID_KEY" });
     } else {
       axios
         .get(
@@ -31,7 +20,9 @@ export const exchange = function (
         )
         .then(function (response) {
           if (!response.data["Realtime Currency Exchange Rate"]) {
-            reject(Error("ALPHA_VANTAGE_KEY_INVALID_OR_EXCEED_RATE_LIMIT"));
+            resolve({
+              error: "ALPHAVANTAGE_EXCEED_RATE_LIMIT",
+            });
           } else {
             const data = response.data["Realtime Currency Exchange Rate"];
             resolve({
@@ -46,22 +37,22 @@ export const exchange = function (
           }
         })
         .catch(function (error) {
-          reject(error);
+          console.log(error);
+          resolve({
+            error: "ALPHAVANTAGE_ERROR",
+          });
         });
     }
   });
 };
 
-export interface IQuoteResponse {
-  price: number;
-  change: number;
-  percent: number;
-}
-
-export const quote = function (key: string | undefined, symbol: string) {
-  return new Promise<IQuoteResponse>(function (resolve, reject) {
+export const quote = function (
+  key: string | undefined,
+  symbol: string
+): Promise<QuoteResponse> {
+  return new Promise(function (resolve) {
     if (!key) {
-      reject(Error("ALPHA_VANTAGE_KEY_NOT_EXIST"));
+      resolve({ error: "ALPHAVANTAGE_INVALID_KEY" });
     } else {
       axios
         .get(
@@ -69,7 +60,9 @@ export const quote = function (key: string | undefined, symbol: string) {
         )
         .then(function (response) {
           if (!response.data["Global Quote"]) {
-            reject(Error("ALPHA_VANTAGE_KEY_INVALID_OR_EXCEED_RATE_LIMIT"));
+            resolve({
+              error: "ALPHAVANTAGE_EXCEED_RATE_LIMIT",
+            });
           } else {
             resolve({
               price: Number(response.data["Global Quote"]["05. price"]),
@@ -79,7 +72,10 @@ export const quote = function (key: string | undefined, symbol: string) {
           }
         })
         .catch(function (error) {
-          reject(error);
+          console.log(error);
+          resolve({
+            error: "ALPHAVANTAGE_ERROR",
+          });
         });
     }
   });

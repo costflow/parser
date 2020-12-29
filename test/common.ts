@@ -44,3 +44,9 @@ export function expectToBeNotError(
 ): asserts data is NParseResult.Result {
   expect((data as NParseResult.Error).error).toBe(undefined);
 }
+
+export function expectToBeError(
+  data: ParseResult
+): asserts data is NParseResult.Error {
+  expect("error" in data).toBeTruthy();
+}

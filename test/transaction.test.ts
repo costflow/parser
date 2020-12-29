@@ -1,4 +1,5 @@
 import costflow from "..";
+import { NParseResult } from "../src/interface";
 import { expectToBeNotError, testConfig, today } from "./common";
 
 /*
@@ -7,10 +8,10 @@ import { expectToBeNotError, testConfig, today } from "./common";
 
 // Use >
 test("Transaction #1.1", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     '2017-01-05 "RiverBank Properties" "Paying the rent" 2400 Assets:US:BofA:Checking > 2400  Expenses:Home:Rent',
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
   expect(res.date).toBe("2017-01-05");
   expect(res.completed).toBe(true);
@@ -31,10 +32,10 @@ test("Transaction #1.1", async () => {
   ]);
 });
 test("Transaction #1.2", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "@Verizon 59.61 Assets:BofA > Expenses:Phone",
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
@@ -56,7 +57,10 @@ test("Transaction #1.2", async () => {
 });
 
 test("Transaction #1.3", async () => {
-  const res = await costflow.parse("@Verizon 59.61 bofa > phone", testConfig);
+  const res = (await costflow.parse(
+    "@Verizon 59.61 bofa > phone",
+    testConfig
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
@@ -79,10 +83,10 @@ test("Transaction #1.3", async () => {
 });
 
 test("Transaction #1.4", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "Rent ^rent 750 bofa + 750 visa > rent",
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
@@ -111,10 +115,10 @@ test("Transaction #1.4", async () => {
 });
 
 test("Transaction #1.5", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "! Sushi 7200 JPY bofa > food + alice + bob",
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
@@ -147,10 +151,10 @@ test("Transaction #1.5", async () => {
 });
 
 test("Transaction #1.6", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "! Sushi 7200 JPY > food + alice + bob",
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
@@ -237,10 +241,10 @@ test("Transaction #1.6", async () => {
 // });
 
 test("Transaction #1.10", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "@麦当劳 #food #mc 180 CNY visa > food",
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
@@ -263,12 +267,12 @@ test("Transaction #1.10", async () => {
 });
 
 test("Transaction #1.11", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "@麦当劳 #food #mc 180 CNY visa to food",
     Object.assign(testConfig, {
       flowSymbol: "to",
     })
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
@@ -294,10 +298,10 @@ test("Transaction #1.11", async () => {
  * Use |
  */
 test("Transaction #2.1", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     '2017-01-05 "RiverBank Properties" "Paying the rent" Assets:US:BofA:Checking -2400 | Expenses:Home:Rent 2400',
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.date).toBe("2017-01-05");
@@ -319,10 +323,10 @@ test("Transaction #2.1", async () => {
   ]);
 });
 test("Transaction #2.2", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "@Verizon Assets:BofA -59.61 | Expenses:Phone 59.61",
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
@@ -344,10 +348,10 @@ test("Transaction #2.2", async () => {
 });
 
 test("Transaction #2.3", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "@Verizon bofa -59.61 | phone 59.61",
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
@@ -369,10 +373,10 @@ test("Transaction #2.3", async () => {
 });
 
 test("Transaction #2.4", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "Rent #costflow bofa -750 | visa -750 | rent 1500",
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
@@ -399,10 +403,10 @@ test("Transaction #2.4", async () => {
 });
 
 test("Transaction #2.5", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "! Sushi bofa -7200 JPY | food 2400 JPY | alice 2400 JPY | bob 2400 JPY",
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
@@ -435,10 +439,10 @@ test("Transaction #2.5", async () => {
 });
 
 test("Transaction #2.6", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "! Sushi -7200 JPY | food 2400 JPY | alice 2400 JPY | bob 2400 JPY",
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
@@ -524,10 +528,10 @@ test("Transaction #2.6", async () => {
 // });
 
 test("Transaction #2.10", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "@麦当劳 #food #mc visa -180 CNY | food 180 CNY",
     testConfig
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
@@ -549,10 +553,10 @@ test("Transaction #2.10", async () => {
 });
 
 test("Transaction #2.11", async () => {
-  const res = await costflow.parse(
+  const res = (await costflow.parse(
     "@麦当劳 #food #mc visa -180 CNY / food 180 CNY",
     Object.assign(testConfig, { pipeSymbol: "/" })
-  );
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);

@@ -1,11 +1,15 @@
 import costflow from "..";
+import { NParseResult } from "../src/interface";
 import { expectToBeNotError, testConfig, today } from "./common";
 
 /*
   Part 13: Formula
 */
 test("Formula #1", async () => {
-  const res = await costflow.parse("f spotify", testConfig);
+  const res = (await costflow.parse(
+    "f spotify",
+    testConfig
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.directive).toBe("transaction");
@@ -28,7 +32,10 @@ test("Formula #1", async () => {
   ]);
 });
 test("Formula #2", async () => {
-  const res = await costflow.parse("btv #transfer 12.50", testConfig);
+  const res = (await costflow.parse(
+    "btv #transfer 12.50",
+    testConfig
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.directive).toBe("transaction");
@@ -52,7 +59,10 @@ test("Formula #2", async () => {
 });
 
 test("Formula #3", async () => {
-  const res = await costflow.parse("f uber 8.8", testConfig);
+  const res = (await costflow.parse(
+    "f uber 8.8",
+    testConfig
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
   expect(res.directive).toBe("transaction");
   expect(res.date).toBe(today.format("YYYY-MM-DD"));
@@ -75,7 +85,10 @@ test("Formula #3", async () => {
 });
 
 test("Formula #4", async () => {
-  const res = await costflow.parse("☕️ 4.2", testConfig);
+  const res = (await costflow.parse(
+    "☕️ 4.2",
+    testConfig
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.directive).toBe("transaction");
@@ -99,7 +112,10 @@ test("Formula #4", async () => {
 });
 
 test("Formula #5", async () => {
-  const res = await costflow.parse("tb bofa 1200", testConfig);
+  const res = (await costflow.parse(
+    "tb bofa 1200",
+    testConfig
+  )) as NParseResult.TransactionResult;
   expectToBeNotError(res);
 
   expect(res.directive).toBe("balance");

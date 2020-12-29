@@ -25,7 +25,7 @@ const parser = async (
   overwriteConfig?: Partial<UserConfig> | null,
   overwriteResult?: Partial<ParseResult> | null,
   _isFromFormula?: boolean | undefined
-): Promise<ParseResult | string> => {
+): Promise<ParseResult> => {
   /*
    * 0. Preparation
    */
@@ -237,6 +237,9 @@ const parser = async (
     if (!_currencies.length) {
       // quote
       const remote = await quote(config?.alphavantage, _word());
+      if ("error" in remote) {
+        return remote;
+      }
       _data.rate = remote.price;
       _data.from = _word().toUpperCase();
       _data.to = "USD"; // Only stocks listed on US markets are supported at the moment
@@ -251,6 +254,9 @@ const parser = async (
     if (typeof _data.rate === "undefined") {
       // fetch from AlphaVantage API
       const remote = await exchange(config?.alphavantage, _data.from, _data.to);
+      if ("error" in remote) {
+        return remote;
+      }
       _data.rate = remote.rate;
       _data.api = true;
     }

@@ -1,4 +1,6 @@
 import { currencyList } from "./config/currency-codes";
+import type { cryptoList } from "./config/crypto-currency-codes";
+import type { exchangeList } from "./config/currency-codes";
 
 export type ArrayElement<
   ArrayType extends readonly unknown[]
@@ -34,11 +36,10 @@ export interface UserConfig {
 export type ParseResult =
   | NParseResult.Result
   | NParseResult.TransactionResult
-  | NParseResult.Error
-  | string;
+  | NParseResult.Error;
 
 export namespace NParseResult {
-  export interface Result extends Record<string, any> {
+  export interface Result {
     // Basic
     directive: string;
     date: string;
@@ -51,13 +52,11 @@ export namespace NParseResult {
     output?: string;
   }
   export interface TransactionResult extends Result {
-    // Basic
-    directive: string;
-    date: string;
-    created_at: string;
-    shortcut?: string;
-    timezone: string;
-    data: any;
+    links: string[];
+    tags: string[];
+    payee: string;
+    narration: string;
+    completed: boolean;
   }
 
   export interface Error {
@@ -74,7 +73,8 @@ export namespace NParseResult {
       | "DOUBLE_QUOTES_SHOULD_BE_FOUR"
       | "OUTPUT_MODE_NOT_SUPPORT"
       | "ALPHAVANTAGE_INVALID_KEY"
-      | "ALPHAVANTAGE_EXCEED_RATE_LIMIT";
+      | "ALPHAVANTAGE_EXCEED_RATE_LIMIT"
+      | "ALPHAVANTAGE_ERROR";
   }
 }
 
@@ -83,3 +83,37 @@ export interface AAC {
   account: string;
   currency: string;
 }
+
+/* for alphavantage */
+
+export type AlphaVantageCryptoCurrency = ArrayElement<typeof cryptoList>;
+export type AlphaVantageFiatCurrency = ArrayElement<typeof exchangeList>;
+export type AlphaVantageCurrency =
+  | AlphaVantageCryptoCurrency
+  | AlphaVantageFiatCurrency;
+
+export namespace NAlphaVantage {
+  export interface IExchangeSuccessResponse {
+    rate: number;
+    updatedAt: number;
+  }
+  export interface IQuoteSuccessResponse {
+    price: number;
+    change: number;
+    percent: number;
+  }
+  export interface AlphaVantageError {
+    error:
+      | "ALPHAVANTAGE_INVALID_KEY"
+      | "ALPHAVANTAGE_EXCEED_RATE_LIMIT"
+      | "ALPHAVANTAGE_ERROR";
+  }
+}
+
+export type ExchangeResponse =
+  | NAlphaVantage.IExchangeSuccessResponse
+  | NAlphaVantage.AlphaVantageError;
+
+export type QuoteResponse =
+  | NAlphaVantage.IQuoteSuccessResponse
+  | NAlphaVantage.AlphaVantageError;
