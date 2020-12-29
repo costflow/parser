@@ -205,7 +205,8 @@ test("Beancount #18", async () => {
 test("Beancount #19", async () => {
   const res = await costflow.parse(
     "@麦当劳 #food #mc visa -180 CNY to food 180 CNY",
-    Object.assign(beancountConfig, { flowSymbol: "to" })
+    beancountConfig,
+    { flowSymbol: "to" }
   );
   expectToBeNotError(res);
   expect(res.directive).toBe("transaction");
@@ -219,18 +220,34 @@ test("Beancount #19", async () => {
 test("Beancount #20", async () => {
   const now = dayjs().tz(beancountConfig.timezone);
   const res = await costflow.parse(
-    "@麦当劳 #food #mc visa -180 CNY to food 180 CNY",
+    "@麦当劳 #food #mc visa -180 CNY > food 180 CNY",
     beancountConfig,
     { insertTime: "metadata" },
     { created_at: now.toISOString() }
   );
   expectToBeNotError(res);
   expect(res.directive).toBe("transaction");
-  console.log(res.output);
   expect(res.output).toBe(`${today.format(
     "YYYY-MM-DD"
   )} * "麦当劳" "" #costflow #food #mc
   time: "${now.format("HH:mm:ss")}"
   Liabilities:Visa                               -180.00 CNY
   Expenses:Food                                  +180.00 CNY`);
+});
+
+test("Beancount #21", async () => {
+  const res = await costflow.parse(
+    "@麦当劳 #food #mc visa -180 CNY > food 180 CNY",
+    beancountConfig,
+    {
+      lineLength: 20,
+    }
+  );
+  expectToBeNotError(res);
+  expect(res.directive).toBe("transaction");
+  expect(res.output).toBe(`${today.format(
+    "YYYY-MM-DD"
+  )} * "麦当劳" "" #costflow #food #mc
+  Liabilities:Visa -180.00 CNY
+  Expenses:Food +180.00 CNY`);
 });

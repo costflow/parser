@@ -83,14 +83,16 @@ const generator = (
       result += "\n";
       result += fillBlank(indent);
       result += aac.account;
-      result += fillBlank(
+      let blanks =
         lineLength -
-          indent -
-          (aac.account ? aac.account.length : 0) -
-          ((aac.amount > 0 ? "+" : "") + String(aac.amount.toFixed(2))).length -
-          1 -
-          aac.currency.length
-      );
+        indent -
+        (aac.account ? aac.account.length : 0) -
+        ((aac.amount > 0 ? "+" : "") + String(aac.amount.toFixed(2))).length -
+        1 -
+        aac.currency.length;
+
+      blanks = blanks > 0 ? blanks : 1;
+      result += fillBlank(blanks);
 
       result += aac.amount > 0 ? "+" : "";
       result += aac.amount.toFixed(2);
