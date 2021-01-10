@@ -1,12 +1,12 @@
 # Costflow Parser
 
-Costflow Parser is a double-entry bookkeeping library that parses plain text to JSON or Beancount/Ledger/hledger formats using [Costflow Syntax](https://docs.costflow.io/).
+Costflow Parser is a double-entry bookkeeping library that parses plain text to JSON or Beancount/Ledger/hledger formats using [Costflow Syntax](https://www.costflow.io/docs/syntax/).
 
-[Costflow Syntax](https://docs.costflow.io/syntax/) Version: v1.0
+[Costflow Syntax](https://www.costflow.io/docs/syntax/) Version: v1.0
 
 ## Docs
 
-[https://docs.costflow.io/](https://docs.costflow.io/)
+[https://www.costflow.io/docs/](https://www.costflow.io/docs/)
 
 ## Installing
 
