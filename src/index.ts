@@ -325,15 +325,15 @@ const parser = async (
 
         if (_flowSliceIndex[f] < _flowIndex) {
           amount = amount && amount > 0 ? 0 - amount : amount;
-          _leftAmount += amount || 0;
+          _leftAmount += Math.abs(amount || 0);
           _leftCurrency = currency;
         } else {
           if (amount) {
             _rightAmount += amount;
           } else {
             amount =
-              (_rightAmount - _leftAmount) / (_flowSliceIndex.length - f);
-            _rightAmount -= amount; // Math.toFixed
+              (_leftAmount - _rightAmount) / (_flowSliceIndex.length - f);
+            _rightAmount += amount;
           }
           if (!currency) {
             currency = _leftCurrency || config.currency;
@@ -364,14 +364,8 @@ const parser = async (
           config,
           config.pipeSymbol
         );
-        const {
-          account,
-          currency,
-          narration,
-          payee,
-          tags,
-          links,
-        } = parseResult;
+        const { account, currency, narration, payee, tags, links } =
+          parseResult;
         let { amount } = parseResult;
 
         data.push({

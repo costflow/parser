@@ -186,6 +186,37 @@ test("Transaction #1.6", async () => {
   ]);
 });
 
+test("Transaction #1.7", async () => {
+  const res = (await costflow.parse(
+    "Sushi 7200 JPY bofa > 4200 food + alice",
+    testConfig
+  )) as NParseResult.TransactionResult;
+  expectToBeNotError(res);
+
+  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  expect(res.completed).toBe(true);
+  expect(res.payee).toBe(null);
+  expect(res.narration).toBe("Sushi");
+  expect(res.tags).toEqual(["costflow"]);
+  expect(res.data).toEqual([
+    {
+      account: "Assets:BofA",
+      amount: -7200,
+      currency: "JPY",
+    },
+    {
+      account: "Expenses:Food",
+      amount: 4200,
+      currency: "JPY",
+    },
+    {
+      account: "Assets:Receivables:Alice",
+      amount: 3000,
+      currency: "JPY",
+    },
+  ]);
+});
+
 // todo: support @ / @@ / {}
 // test("Transaction #1.6", async () => {
 //   const res = await costflow.parse(
