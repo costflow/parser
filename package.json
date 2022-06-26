@@ -1,6 +1,6 @@
 {
   "name": "costflow",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Costflow Parser",
   "main": "lib/index.js",
   "browser": "dist/index.min.js",
@@ -61,7 +61,7 @@
     "ts-jest": "^26.3.0",
     "typescript": "^4.0.3",
     "webpack": "^5.55.1",
-    "webpack-bundle-analyzer": "^3.9.0",
+    "webpack-bundle-analyzer": "^4.5.0",
     "webpack-cli": "^3.3.12"
   },
   "sideEffects": false
