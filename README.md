@@ -27,7 +27,7 @@ yarn add costflow
 ```js
 import costflow from "costflow";
 // or imports with `require()`
-const costflow = require("costflow").default;
+const costflow = require("costflow");
 
 const config = {
   mode: "beancount",

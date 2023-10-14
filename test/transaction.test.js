@@ -1,24 +1,24 @@
-import costflow from "..";
-import { NParseResult } from "../src/interface";
-import { expectToBeNotError, testConfig, today } from "./common";
+import test from "ava";
+import costflow from "../src/main.mjs";
+import { testConfig, today } from "./common.js";
 
 /*
  * Transaction
  */
 
 // Use >
-test("Transaction #1.1", async () => {
-  const res = (await costflow.parse(
+test("Transaction #1.1", async (t) => {
+  const res = await costflow(
     '2017-01-05 "RiverBank Properties" "Paying the rent" 2400 Assets:US:BofA:Checking > 2400  Expenses:Home:Rent',
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
-  expect(res.date).toBe("2017-01-05");
+  );
+  t.is(res.error, undefined);
+  t.is(res.date, "2017-01-05");
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("RiverBank Properties");
   expect(res.narration).toBe("Paying the rent");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:US:BofA:Checking",
       amount: -2400,
@@ -31,18 +31,18 @@ test("Transaction #1.1", async () => {
     },
   ]);
 });
-test("Transaction #1.2", async () => {
-  const res = (await costflow.parse(
+test("Transaction #1.2", async (t) => {
+  const res = await costflow(
     "@Verizon 59.61 Assets:BofA > Expenses:Phone",
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  );
+  t.is(res.error, undefined);
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("Verizon");
   expect(res.narration).toBe("");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA",
       amount: -59.61,
@@ -56,19 +56,16 @@ test("Transaction #1.2", async () => {
   ]);
 });
 
-test("Transaction #1.3", async () => {
-  const res = (await costflow.parse(
-    "@Verizon 59.61 bofa > phone",
-    testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+test("Transaction #1.3", async (t) => {
+  const res = await costflow("@Verizon 59.61 bofa > phone", testConfig);
+  t.is(res.error, undefined);
 
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("Verizon");
   expect(res.narration).toBe("");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA",
       amount: -59.61,
@@ -82,20 +79,20 @@ test("Transaction #1.3", async () => {
   ]);
 });
 
-test("Transaction #1.4", async () => {
-  const res = (await costflow.parse(
+test("Transaction #1.4", async (t) => {
+  const res = await costflow(
     "Rent ^rent 750 bofa + 750 visa > rent",
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+  );
+  t.is(res.error, undefined);
 
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe(null);
   expect(res.narration).toBe("Rent");
   expect(res.tags).toEqual(["costflow"]);
   expect(res.links).toEqual(["rent"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA",
       amount: -750,
@@ -114,19 +111,19 @@ test("Transaction #1.4", async () => {
   ]);
 });
 
-test("Transaction #1.5", async () => {
-  const res = (await costflow.parse(
+test("Transaction #1.5", async (t) => {
+  const res = await costflow(
     "! Sushi 7200 JPY bofa > food + alice + bob",
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+  );
+  t.is(res.error, undefined);
 
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(false);
   expect(res.payee).toBe(null);
   expect(res.narration).toBe("Sushi");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA",
       amount: -7200,
@@ -150,19 +147,19 @@ test("Transaction #1.5", async () => {
   ]);
 });
 
-test("Transaction #1.6", async () => {
-  const res = (await costflow.parse(
+test("Transaction #1.6", async (t) => {
+  const res = await costflow(
     "! Sushi 7200 JPY > food + alice + bob",
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+  );
+  t.is(res.error, undefined);
 
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(false);
   expect(res.payee).toBe(null);
   expect(res.narration).toBe("Sushi");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA", // default account
       amount: -7200,
@@ -186,19 +183,19 @@ test("Transaction #1.6", async () => {
   ]);
 });
 
-test("Transaction #1.7", async () => {
-  const res = (await costflow.parse(
+test("Transaction #1.7", async (t) => {
+  const res = await costflow(
     "Sushi 7200 JPY bofa > 4200 food + alice",
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+  );
+  t.is(res.error, undefined);
 
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe(null);
   expect(res.narration).toBe("Sushi");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA",
       amount: -7200,
@@ -218,12 +215,12 @@ test("Transaction #1.7", async () => {
 });
 
 // todo: support @ / @@ / {}
-// test("Transaction #1.6", async () => {
-//   const res = await costflow.parse(
+// test("Transaction #1.6", async t => {
+//   const res = await costflow(
 //     "Transfer to account in US 5000 CNY @ 7.2681 USD boc > 726.81 USD bofa",
 //     testConfig
 //   );
-//   expectToBeNotError(res);
+//   t.is(res.error, undefined);
 //   expect(res.output).toBe(`${today.format(
 //     "YYYY-MM-DD"
 //   )} * "Transfer to account in US" #costflow
@@ -231,12 +228,12 @@ test("Transaction #1.7", async () => {
 //   Assets:US:BofA:Checking                        +726.81 USD`);
 // });
 
-// test("Transaction #1.7", async () => {
-//   const res = await costflow.parse(
+// test("Transaction #1.7", async t => {
+//   const res = await costflow(
 //     "Transfer to account in US 5000 CNY @@ 726.81 USD boc > 726.81 USD bofa",
 //     testConfig
 //   );
-//   expectToBeNotError(res);
+//   t.is(res.error, undefined);
 //   expect(res.output).toBe(`${today.format(
 //     "YYYY-MM-DD"
 //   )} * "Transfer to account in US" #costflow
@@ -244,12 +241,12 @@ test("Transaction #1.7", async () => {
 //   Assets:US:BofA:Checking                        +726.81 USD`);
 // });
 
-// test("Transaction #1.8", async () => {
-//   const res = await costflow.parse(
+// test("Transaction #1.8", async t => {
+//   const res = await costflow(
 //     "Bought shares of Apple 1915.5 bofa > 10 AAPL {191.55 USD} aapl",
 //     testConfig
 //   );
-//   expectToBeNotError(res);
+//   t.is(res.error, undefined);
 //   expect(res.output).toBe(`${today.format(
 //     "YYYY-MM-DD"
 //   )} * "Bought shares of Apple" #costflow
@@ -257,12 +254,12 @@ test("Transaction #1.7", async () => {
 //   Assets:ETrade:AAPL                             +10.00 AAPL {191.55 USD}`);
 // });
 
-// test("Transaction #1.9", async () => {
-//   const res = await costflow.parse(
+// test("Transaction #1.9", async t => {
+//   const res = await costflow(
 //     "Sold shares of Apple 10 AAPL {191.55 USD} @ 201.55 USD aapl + 100 USD cg > 2015.5 bofa",
 //     testConfig
 //   );
-//   expectToBeNotError(res);
+//   t.is(res.error, undefined);
 //   expect(res.output).toBe(`${today.format(
 //     "YYYY-MM-DD"
 //   )} * "Sold shares of Apple" #costflow
@@ -271,19 +268,19 @@ test("Transaction #1.7", async () => {
 //   Assets:US:BofA:Checking                       +2015.50 USD`);
 // });
 
-test("Transaction #1.10", async () => {
-  const res = (await costflow.parse(
+test("Transaction #1.10", async (t) => {
+  const res = await costflow(
     "@麦当劳 #food #mc 180 CNY visa > food",
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+  );
+  t.is(res.error, undefined);
 
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("麦当劳");
   expect(res.narration).toBe("");
   expect(res.tags).toEqual(["costflow", "food", "mc"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Liabilities:Visa",
       amount: -180,
@@ -297,21 +294,21 @@ test("Transaction #1.10", async () => {
   ]);
 });
 
-test("Transaction #1.11", async () => {
-  const res = (await costflow.parse(
+test("Transaction #1.11", async (t) => {
+  const res = await costflow(
     "@麦当劳 #food #mc 180 CNY visa to food",
     Object.assign(testConfig, {
       flowSymbol: "to",
     })
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+  );
+  t.is(res.error, undefined);
 
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("麦当劳");
   expect(res.narration).toBe("");
   expect(res.tags).toEqual(["costflow", "food", "mc"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Liabilities:Visa",
       amount: -180,
@@ -328,19 +325,19 @@ test("Transaction #1.11", async () => {
 /*
  * Use |
  */
-test("Transaction #2.1", async () => {
-  const res = (await costflow.parse(
+test("Transaction #2.1", async (t) => {
+  const res = await costflow(
     '2017-01-05 "RiverBank Properties" "Paying the rent" Assets:US:BofA:Checking -2400 | Expenses:Home:Rent 2400',
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+  );
+  t.is(res.error, undefined);
 
-  expect(res.date).toBe("2017-01-05");
+  t.is(res.date, "2017-01-05");
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("RiverBank Properties");
   expect(res.narration).toBe("Paying the rent");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:US:BofA:Checking",
       amount: -2400,
@@ -353,18 +350,18 @@ test("Transaction #2.1", async () => {
     },
   ]);
 });
-test("Transaction #2.2", async () => {
-  const res = (await costflow.parse(
+test("Transaction #2.2", async (t) => {
+  const res = await costflow(
     "@Verizon Assets:BofA -59.61 | Expenses:Phone 59.61",
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  );
+  t.is(res.error, undefined);
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("Verizon");
   expect(res.narration).toBe("");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA",
       amount: -59.61,
@@ -378,18 +375,15 @@ test("Transaction #2.2", async () => {
   ]);
 });
 
-test("Transaction #2.3", async () => {
-  const res = (await costflow.parse(
-    "@Verizon bofa -59.61 | phone 59.61",
-    testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+test("Transaction #2.3", async (t) => {
+  const res = await costflow("@Verizon bofa -59.61 | phone 59.61", testConfig);
+  t.is(res.error, undefined);
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("Verizon");
   expect(res.narration).toBe("");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA",
       amount: -59.61,
@@ -403,18 +397,18 @@ test("Transaction #2.3", async () => {
   ]);
 });
 
-test("Transaction #2.4", async () => {
-  const res = (await costflow.parse(
+test("Transaction #2.4", async (t) => {
+  const res = await costflow(
     "Rent #costflow bofa -750 | visa -750 | rent 1500",
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  );
+  t.is(res.error, undefined);
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe(null);
   expect(res.narration).toBe("Rent");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA",
       amount: -750,
@@ -433,19 +427,19 @@ test("Transaction #2.4", async () => {
   ]);
 });
 
-test("Transaction #2.5", async () => {
-  const res = (await costflow.parse(
+test("Transaction #2.5", async (t) => {
+  const res = await costflow(
     "! Sushi bofa -7200 JPY | food 2400 JPY | alice 2400 JPY | bob 2400 JPY",
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+  );
+  t.is(res.error, undefined);
 
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(false);
   expect(res.payee).toBe(null);
   expect(res.narration).toBe("Sushi");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA",
       amount: -7200,
@@ -469,19 +463,19 @@ test("Transaction #2.5", async () => {
   ]);
 });
 
-test("Transaction #2.6", async () => {
-  const res = (await costflow.parse(
+test("Transaction #2.6", async (t) => {
+  const res = await costflow(
     "! Sushi -7200 JPY | food 2400 JPY | alice 2400 JPY | bob 2400 JPY",
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+  );
+  t.is(res.error, undefined);
 
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(false);
   expect(res.payee).toBe(null);
   expect(res.narration).toBe("Sushi");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA", // default account
       amount: -7200,
@@ -505,12 +499,12 @@ test("Transaction #2.6", async () => {
   ]);
 });
 
-// test("Transaction #2.6", async () => {
-//   const res = await costflow.parse(
+// test("Transaction #2.6", async t => {
+//   const res = await costflow(
 //     "Transfer to account in US | boc -5000 CNY @ 7.2681 USD  | bofa +726.81",
 //     testConfig
 //   );
-//   expectToBeNotError(res);
+//   t.is(res.error, undefined);
 //   expect(res.output).toBe(`${today.format(
 //     "YYYY-MM-DD"
 //   )} * "Transfer to account in US" #costflow
@@ -518,12 +512,12 @@ test("Transaction #2.6", async () => {
 //   Assets:US:BofA:Checking                        +726.81 USD`);
 // });
 
-// test("Transaction #2.7", async () => {
-//   const res = await costflow.parse(
+// test("Transaction #2.7", async t => {
+//   const res = await costflow(
 //     "Transfer to account in US | boc -5000 CNY @@ 726.81 USD  | bofa +726.81",
 //     testConfig
 //   );
-//   expectToBeNotError(res);
+//   t.is(res.error, undefined);
 //   expect(res.output).toBe(`${today.format(
 //     "YYYY-MM-DD"
 //   )} * "Transfer to account in US" #costflow
@@ -531,12 +525,12 @@ test("Transaction #2.6", async () => {
 //   Assets:US:BofA:Checking                        +726.81 USD`);
 // });
 
-// test("Transaction #2.8", async () => {
-//   const res = await costflow.parse(
+// test("Transaction #2.8", async t => {
+//   const res = await costflow(
 //     "Bought shares of Apple | bofa -1915.5 | aapl 10 AAPL {191.55 USD}",
 //     testConfig
 //   );
-//   expectToBeNotError(res);
+//   t.is(res.error, undefined);
 //   expect(res.output).toBe(`${today.format(
 //     "YYYY-MM-DD"
 //   )} * "Bought shares of Apple" #costflow
@@ -544,12 +538,12 @@ test("Transaction #2.6", async () => {
 //   Assets:ETrade:AAPL                             +10.00 AAPL {191.55 USD}`);
 // });
 
-// test("Transaction #2.9", async () => {
-//   const res = await costflow.parse(
+// test("Transaction #2.9", async t => {
+//   const res = await costflow(
 //     "Sold shares of Apple | aapl -10.00 AAPL {191.55 USD} @ 201.55 USD | cg -100.00 USD | bofa +2015.5",
 //     testConfig
 //   );
-//   expectToBeNotError(res);
+//   t.is(res.error, undefined);
 //   expect(res.output).toBe(`${today.format(
 //     "YYYY-MM-DD"
 //   )} * "Sold shares of Apple" #costflow
@@ -558,18 +552,18 @@ test("Transaction #2.6", async () => {
 //   Assets:US:BofA:Checking                       +2015.50 USD`);
 // });
 
-test("Transaction #2.10", async () => {
-  const res = (await costflow.parse(
+test("Transaction #2.10", async (t) => {
+  const res = await costflow(
     "@麦当劳 #food #mc visa -180 CNY | food 180 CNY",
     testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  );
+  t.is(res.error, undefined);
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("麦当劳");
   expect(res.narration).toBe("");
   expect(res.tags).toEqual(["costflow", "food", "mc"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Liabilities:Visa",
       amount: -180,
@@ -583,18 +577,18 @@ test("Transaction #2.10", async () => {
   ]);
 });
 
-test("Transaction #2.11", async () => {
-  const res = (await costflow.parse(
+test("Transaction #2.11", async (t) => {
+  const res = await costflow(
     "@麦当劳 #food #mc visa -180 CNY / food 180 CNY",
     Object.assign(testConfig, { pipeSymbol: "/" })
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  );
+  t.is(res.error, undefined);
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("麦当劳");
   expect(res.narration).toBe("");
   expect(res.tags).toEqual(["costflow", "food", "mc"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Liabilities:Visa",
       amount: -180,

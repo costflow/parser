@@ -1,24 +1,22 @@
+import test from "ava";
 import costflow from "..";
 import { NParseResult } from "../src/interface";
-import { expectToBeNotError, testConfig, today } from "./common";
+import { testConfig, today } from "./common.mjs";
 
 /*
   Part 13: Formula
 */
-test("Formula #1", async () => {
-  const res = (await costflow.parse(
-    "f spotify",
-    testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+test("Formula #1", async (t) => {
+  const res = await costflow("f spotify", testConfig);
+  t.is(res.error, undefined);
 
-  expect(res.directive).toBe("transaction");
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  t.is(res.directive, "transaction");
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("Spotify");
   expect(res.narration).toBe("");
   expect(res.tags).toEqual(["costflow", "music"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Liabilities:Visa",
       amount: -15.98,
@@ -31,20 +29,17 @@ test("Formula #1", async () => {
     },
   ]);
 });
-test("Formula #2", async () => {
-  const res = (await costflow.parse(
-    "btv #transfer 12.50",
-    testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+test("Formula #2", async (t) => {
+  const res = await costflow("btv #transfer 12.50", testConfig);
+  t.is(res.error, undefined);
 
-  expect(res.directive).toBe("transaction");
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  t.is(res.directive, "transaction");
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe(null);
   expect(res.narration).toBe("");
   expect(res.tags).toEqual(["costflow", "transfer"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA",
       amount: -12.5,
@@ -58,19 +53,16 @@ test("Formula #2", async () => {
   ]);
 });
 
-test("Formula #3", async () => {
-  const res = (await costflow.parse(
-    "f uber 8.8",
-    testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
-  expect(res.directive).toBe("transaction");
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+test("Formula #3", async (t) => {
+  const res = await costflow("f uber 8.8", testConfig);
+  t.is(res.error, undefined);
+  t.is(res.directive, "transaction");
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("Uber");
   expect(res.narration).toBe("");
   expect(res.tags).toEqual(["costflow", "uber"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Liabilities:Visa",
       amount: -8.8,
@@ -84,20 +76,17 @@ test("Formula #3", async () => {
   ]);
 });
 
-test("Formula #4", async () => {
-  const res = (await costflow.parse(
-    "☕️ 4.2",
-    testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+test("Formula #4", async (t) => {
+  const res = await costflow("☕️ 4.2", testConfig);
+  t.is(res.error, undefined);
 
-  expect(res.directive).toBe("transaction");
-  expect(res.date).toBe(today.format("YYYY-MM-DD"));
+  t.is(res.directive, "transaction");
+  t.is(res.date, today.format("YYYY-MM-DD"));
   expect(res.completed).toBe(true);
   expect(res.payee).toBe("Leplay's");
   expect(res.narration).toBe("☕️");
   expect(res.tags).toEqual(["costflow"]);
-  expect(res.data).toEqual([
+  t.deepEqual(res.data, [
     {
       account: "Liabilities:Visa",
       amount: -4.2,
@@ -111,16 +100,13 @@ test("Formula #4", async () => {
   ]);
 });
 
-test("Formula #5", async () => {
-  const res = (await costflow.parse(
-    "tb bofa 1200",
-    testConfig
-  )) as NParseResult.TransactionResult;
-  expectToBeNotError(res);
+test("Formula #5", async (t) => {
+  const res = await costflow("tb bofa 1200", testConfig);
+  t.is(res.error, undefined);
 
-  expect(res.directive).toBe("balance");
-  expect(res.date).toBe(today.add(1, "d").format("YYYY-MM-DD"));
-  expect(res.data).toEqual([
+  t.is(res.directive, "balance");
+  t.is(res.date, today.add(1, "d").format("YYYY-MM-DD"));
+  t.deepEqual(res.data, [
     {
       account: "Assets:BofA",
       amount: 1200,

@@ -1,14 +1,12 @@
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc"; // dependent on utc plugin
-import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc.js"; // dependent on utc plugin
+import timezone from "dayjs/plugin/timezone.js";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-import { ParseResult, NParseResult, UserConfig } from "../lib/interface";
-
-export const testConfig: UserConfig = {
+export const testConfig = {
   mode: "json",
-  currency: "USD" as const,
+  currency: "USD",
   timezone: "America/Los_Angeles",
   tag: "#costflow",
   account: {
@@ -38,15 +36,3 @@ export const testConfig: UserConfig = {
 };
 
 export const today = dayjs().tz(testConfig.timezone);
-
-export function expectToBeNotError(
-  data: ParseResult
-): asserts data is NParseResult.Result {
-  expect((data as NParseResult.Error).error).toBe(undefined);
-}
-
-export function expectToBeError(
-  data: ParseResult
-): asserts data is NParseResult.Error {
-  expect("error" in data).toBeTruthy();
-}

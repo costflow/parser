@@ -1,7 +1,6 @@
 import dayjs from "dayjs";
-import { NParseResult, UserConfig, AAC } from "./interface";
 
-const fillBlank = (len: number): string => {
+const fillBlank = (len) => {
   let result = "";
   for (let i = 0; i < len; i++) {
     result += " ";
@@ -9,18 +8,14 @@ const fillBlank = (len: number): string => {
   return result;
 };
 
-const generator = (
-  input: NParseResult.Result | NParseResult.TransactionResult,
-  mode: "beancount" | undefined,
-  config: Partial<UserConfig>
-): string | NParseResult.Error => {
+const generator = (input, mode, config) => {
   if (mode !== "beancount") {
     return { error: "OUTPUT_MODE_NOT_SUPPORT" };
   }
 
   const { indent = 2, lineLength = 60 } = config;
 
-  let result: string = "";
+  let result = "";
 
   if (input.directive === "comment") {
     result += "; " + input.data;
@@ -40,8 +35,8 @@ const generator = (
     input.directive === "option" ||
     input.directive === "pad"
   ) {
-    let key: string = Object.keys(input.data)[0];
-    let value: string = input.data[key];
+    let key = Object.keys(input.data)[0];
+    let value = input.data[key];
     key = input.directive === "pad" ? key : `"${key}"`;
     value = input.directive === "pad" ? value : `"${value}"`;
     result += `${input.date} ${input.directive} ${key} ${value}`;
@@ -57,7 +52,7 @@ const generator = (
   }
 
   if (input.directive === "transaction") {
-    let transaction = input as NParseResult.TransactionResult;
+    let transaction = input;
     result += `${transaction.date} ${transaction.completed ? "*" : "!"}`;
     result += ` "${transaction.payee || ""}"`;
     result += ` "${transaction.narration}"`;
@@ -84,7 +79,7 @@ const generator = (
       result += `time: "${dateTime}"`;
     }
 
-    transaction.data.forEach((aac: AAC) => {
+    transaction.data.forEach((aac) => {
       result += "\n";
       result += fillBlank(indent);
       result += aac.account;

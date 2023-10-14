@@ -1,15 +1,7 @@
 import axios from "axios";
 import dayjs from "dayjs";
-import {
-  AlphaVantageCurrency,
-  ExchangeResponse,
-  QuoteResponse,
-} from "./interface";
-export const exchange = function (
-  key: string | undefined,
-  from: AlphaVantageCurrency,
-  to: AlphaVantageCurrency
-): Promise<ExchangeResponse> {
+
+export const exchange = function (key, from, to) {
   return new Promise(function (resolve) {
     if (!key) {
       resolve({ error: "ALPHAVANTAGE_INVALID_KEY" });
@@ -46,10 +38,7 @@ export const exchange = function (
   });
 };
 
-export const quote = function (
-  key: string | undefined,
-  symbol: string
-): Promise<QuoteResponse> {
+export const quote = function (key, symbol) {
   return new Promise(function (resolve) {
     if (!key) {
       resolve({ error: "ALPHAVANTAGE_INVALID_KEY" });

@@ -8,25 +8,10 @@ import {
   isAccountName,
   isCurrency,
   getItemByInsensitiveKey,
-} from "./utils";
-import { UserConfig } from "./interface";
+} from "./utils.mjs";
 
-interface TransactionResult {
-  amount: number | null;
-  currency: string | null;
-  account: string | null;
-  tags: string[];
-  links: string[];
-  payee: string | null;
-  narration: string;
-}
-
-export const parseTransaction = (
-  arr: string[],
-  config: UserConfig,
-  symbolToRemove?: string
-): TransactionResult => {
-  let result: any = {
+export const parseTransaction = (arr, config, symbolToRemove) => {
+  let result = {
     tags: [],
     links: [],
   };

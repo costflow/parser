@@ -1,4 +1,4 @@
-export const PRESERVED_SYMBOLS: string[] = [
+export const PRESERVED_SYMBOLS = [
   "+",
   "-",
   ">",
@@ -8,10 +8,10 @@ export const PRESERVED_SYMBOLS: string[] = [
   "$",
   "@",
   "/",
-  ";",
-];
+  ";"
+]
 
-export const DIRECTIVES: string[] = [
+export const DIRECTIVES = [
   "open",
   "close",
   "comment",
@@ -24,24 +24,24 @@ export const DIRECTIVES: string[] = [
   "snap",
   "pad",
   "balance",
-  "transaction",
+  "transaction"
   // "set", // later: set account map?
-];
+]
 
-export const DIRECTIVE_SHORTCUTS: Record<string, string> = {
+export const DIRECTIVE_SHORTCUTS = {
   "//": "comment",
   ";": "comment",
   $: "snap",
   f: "formula",
   "!": "transaction",
-  "*": "transaction",
-};
+  "*": "transaction"
+}
 
-export const DATE_SHORTCUTS: Record<string, number> = {
+export const DATE_SHORTCUTS = {
   dby: -2,
   ytd: -1,
   yesterday: -1,
   tmr: 1,
   tomorrow: 1,
-  dat: 2,
-};
+  dat: 2
+}

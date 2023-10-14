@@ -1,5 +1,5 @@
 /*
-  Costflow Syntax: https://docs.costflow.io/syntax/
+  Costflow Syntax: https://www.costflow.io/docs/syntax/
 */
 import _ from "lodash";
 import {
@@ -11,21 +11,24 @@ import {
   nowWithTimezone,
   isCurrency,
   getItemByInsensitiveKey,
-} from "./utils";
-import { compileFormula } from "./formula";
-import { parseTransaction } from "./transaction";
-import { exchange, quote } from "./alphavantage";
-import { DIRECTIVES, DIRECTIVE_SHORTCUTS, DATE_SHORTCUTS } from "./config";
-import { UserConfig, ParseResult } from "./interface";
-import { generate } from "./generator";
+} from "./utils.mjs";
+import { compileFormula } from "./formula.mjs";
+import { parseTransaction } from "./transaction.mjs";
+import * as alphavantage from "./alphavantage.mjs";
+import {
+  DIRECTIVES,
+  DIRECTIVE_SHORTCUTS,
+  DATE_SHORTCUTS,
+} from "./config/index.mjs";
+import { generate } from "./generator.mjs";
 
-const parser = async (
-  input: string,
-  config: UserConfig,
-  overwriteConfig?: Partial<UserConfig> | null,
-  overwriteResult?: Partial<ParseResult> | null,
-  _isFromFormula?: boolean | undefined
-): Promise<ParseResult> => {
+export default async function costflow(
+  input,
+  config,
+  overwriteConfig,
+  overwriteResult,
+  _isFromFormula
+) {
   /*
    * 0. Preparation
    */
@@ -47,12 +50,12 @@ const parser = async (
     overwriteConfig || {}
   );
 
-  let _numbersInInput: number[] = [];
-  let _doubleQuotedIndexInInput: number[] = [];
+  let _numbersInInput = [];
+  let _doubleQuotedIndexInInput = [];
 
-  let _plusSymbolIndex: number[] = [];
-  let _flowSymbolIndex: number[] = [];
-  let _pipeSymbolIndex: number[] = [];
+  let _plusSymbolIndex = [];
+  let _flowSymbolIndex = [];
+  let _pipeSymbolIndex = [];
 
   const _inputArr = input
     .trim()
@@ -87,12 +90,12 @@ const parser = async (
   // index of _inputArr
   let _index = 0;
 
-  let _word = (offset?: number): string => {
+  let _word = (offset) => {
     return _inputArr[_index + (offset || 0)];
   };
 
   // result
-  var result: any = {
+  var result = {
     created_at: _now().toISOString(),
     timezone: config.timezone,
   };
@@ -162,7 +165,7 @@ const parser = async (
       amount: _numbersInInput.length ? _numbersInInput[0] : "",
     });
     if (typeof compiled === "string") {
-      return parser(compiled, config, overwriteConfig, overwriteResult, true);
+      return costflow(compiled, config, overwriteConfig, overwriteResult, true);
     } else {
       return { error: "FORMULA_COMPILE_ERROR" };
     }
@@ -224,7 +227,7 @@ const parser = async (
    */
 
   if (result.directive === "snap" || result.directive === "price") {
-    const _data: any = {};
+    const _data = {};
     if (_numbersInInput.length) {
       if (result.directive === "price") {
         _data.rate = _numbersInInput[_numbersInInput.length - 1];
@@ -236,7 +239,7 @@ const parser = async (
     const _currencies = _inputArr.filter((word) => isCurrency(word, false));
     if (!_currencies.length) {
       // quote
-      const remote = await quote(config?.alphavantage, _word());
+      const remote = await alphavantage.quote(config?.alphavantage, _word());
       if ("error" in remote) {
         return remote;
       }
@@ -253,7 +256,11 @@ const parser = async (
 
     if (typeof _data.rate === "undefined") {
       // fetch from AlphaVantage API
-      const remote = await exchange(config?.alphavantage, _data.from, _data.to);
+      const remote = await alphavantage.exchange(
+        config?.alphavantage,
+        _data.from,
+        _data.to
+      );
       if ("error" in remote) {
         return remote;
       }
@@ -304,7 +311,7 @@ const parser = async (
       : [];
 
     if (_flowSymbolIndex.length > 0) {
-      const data: any = [];
+      const data = [];
       const _flowSliceIndex = _.sortBy(
         _.uniq(_flowSymbolIndex.concat([_index]).concat(_plusSymbolIndex))
       );
@@ -353,7 +360,7 @@ const parser = async (
     }
 
     if (_pipeSymbolIndex.length > 0) {
-      const data: any = [];
+      const data = [];
       const _pipeSliceIndex = _.sortBy(
         _.uniq(_pipeSymbolIndex.concat([_index]))
       );
@@ -383,7 +390,7 @@ const parser = async (
 
     if (!_flowSymbolIndex.length && !_pipeSymbolIndex.length) {
       const parseResult = parseTransaction(_inputArr.slice(_index), config);
-      const data: any = [];
+      const data = [];
       const { account, currency, narration, payee, tags, links } = parseResult;
       let { amount } = parseResult;
 
@@ -419,8 +426,4 @@ const parser = async (
     }
   }
   return result;
-};
-
-export default {
-  parse: parser,
-};
+}
