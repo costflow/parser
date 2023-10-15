@@ -1,12 +1,11 @@
 {
   "name": "costflow",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Costflow Parser",
   "main": "dist/costflow.cjs.js",
   "module": "dist/costflow.esm.js",
   "browser": "dist/costflow.umd.js",
   "license": "GPL-3.0",
-  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/costflow/parser.git"
