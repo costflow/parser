@@ -1,6 +1,6 @@
 {
   "name": "costflow",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Costflow Parser",
   "main": "dist/costflow.cjs.js",
   "module": "dist/costflow.esm.js",
@@ -34,9 +34,10 @@
     "dist"
   ],
   "dependencies": {
-    "axios": "^1.5.1",
+    "axios": "1.2.6",
     "dayjs": "^1.11.10",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "rollup-plugin-polyfill-node": "^0.12.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.5",

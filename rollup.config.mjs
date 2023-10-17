@@ -1,3 +1,4 @@
+import nodePolyfills from "rollup-plugin-polyfill-node";
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
@@ -16,7 +17,14 @@ export default [
       json(),
       resolve(), // so Rollup can find `ms`
       commonjs(), // so Rollup can convert `ms` to an ES module
+      nodePolyfills({
+        include: null,
+      }),
     ],
+    onwarn(warning, warn) {
+      if (warning.code === "THIS_IS_UNDEFINED") return;
+      warn(warning); // this requires Rollup 0.46
+    },
   },
 
   // CommonJS (for Node) and ES module (for bundlers) build.
@@ -29,8 +37,8 @@ export default [
     input: "src/main.mjs",
     external: [
       "dayjs",
-      "dayjs/plugin/utc",
-      "dayjs/plugin/timezone",
+      "dayjs/plugin/utc.js",
+      "dayjs/plugin/timezone.js",
       "axios",
       "lodash",
     ],
