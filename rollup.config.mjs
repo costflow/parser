@@ -39,7 +39,6 @@ export default [
       "dayjs",
       "dayjs/plugin/utc.js",
       "dayjs/plugin/timezone.js",
-      "axios",
       "lodash",
     ],
     output: [
