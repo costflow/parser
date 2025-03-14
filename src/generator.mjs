@@ -9,7 +9,7 @@ const fillBlank = (len) => {
 };
 
 const generator = (input, mode, config) => {
-  if (mode !== "beancount") {
+  if (mode !== "beancount" && mode !== "ledger") {
     return { error: "OUTPUT_MODE_NOT_SUPPORT" };
   }
 
@@ -54,14 +54,26 @@ const generator = (input, mode, config) => {
   if (input.directive === "transaction") {
     let transaction = input;
     result += `${transaction.date} ${transaction.completed ? "*" : "!"}`;
-    result += ` "${transaction.payee || ""}"`;
-    result += ` "${transaction.narration}"`;
-    result += `${transaction.tags.length ? " #" : ""}${transaction.tags.join(
-      " #"
-    )}`;
-    result += `${transaction.links.length ? " ^" : ""}${transaction.links.join(
-      " ^"
-    )}`;
+    if (mode === "beancount") {
+      result += ` "${transaction.payee || ""}"`;
+      result += ` "${transaction.narration}"`;
+      result += `${transaction.tags.length ? " #" : ""}${transaction.tags.join(
+        " #"
+      )}`;
+      result += `${transaction.links.length ? " ^" : ""}${transaction.links.join(
+        " ^"
+      )}`;
+    } else if (mode === "ledger") {
+      result += ` ${transaction.payee || ""}`;
+      result += "\n";
+      result += fillBlank(indent);
+      result += `; ${transaction.narration}`;
+      result += "\n";
+      result += fillBlank(indent);
+      result += `${transaction.tags.length ? "; :" : ""}${transaction.tags.join(
+        ":"
+      )}:`;
+    }
 
     if (config.insertTime === "metadata") {
       result += "\n";
@@ -94,7 +106,11 @@ const generator = (input, mode, config) => {
       blanks = blanks > 0 ? blanks : 1;
       result += fillBlank(blanks);
 
-      result += aac.amount > 0 ? "+" : "";
+      if (mode === "beancount") {
+        result += aac.amount > 0 ? "+" : "";
+      } else if (mode === "ledger") {
+        result += aac.amount > 0 ? " " : "";
+      }
       result += aac.amount.toFixed(2);
       result += " ";
       result += aac.currency;
