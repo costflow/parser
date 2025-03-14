@@ -65,6 +65,14 @@ const generator = (input, mode, config) => {
       )}`;
     } else if (mode === "ledger") {
       result += ` ${transaction.payee || ""}`;
+      result += "\n";
+      result += fillBlank(indent);
+      result += `; ${transaction.narration}`;
+      result += "\n";
+      result += fillBlank(indent);
+      result += `${transaction.tags.length ? "; :" : ""}${transaction.tags.join(
+        ":"
+      )}:`;
     }
 
     if (config.insertTime === "metadata") {
